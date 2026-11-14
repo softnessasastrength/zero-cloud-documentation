@@ -28,9 +28,9 @@ jobs:
       - run: npm run test:api
       - run: node simulator/pwa-smoke.mjs
       - run: python3 scripts/transit-launcher-smoke.py
+      - run: node scripts/transit-real-smoke.mjs
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: chromium-failure-artifacts
+          name: chromium-transit-evidence
           path: playground/test-results/
-

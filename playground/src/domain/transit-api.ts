@@ -4,7 +4,7 @@ export const stationNames: Record<string, string> = { hartford: 'Hartford Union 
 export const transitTime = (value: string) => new Date(value).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
 export function cachedBoard(value: Board, now = Date.now()): Board {
   const age = value.snapshot_date ? now - Date.parse(value.snapshot_date) : Infinity;
-  if (age > 7 * 86400000 || age < 0 || now >= Date.parse(value.queried_at) + 24 * 3600000) return { ...value, cached: true, status: 'Unknown', departures: [], reason: 'Cached snapshot or query window has expired. Start the local Transit service to refresh.' };
+  if (!Number.isFinite(age) || !Number.isFinite(Date.parse(value.queried_at)) || age > 7 * 86400000 || age < 0 || now >= Date.parse(value.queried_at) + 24 * 3600000) return { ...value, cached: true, status: 'Unknown', departures: [], reason: 'Cached snapshot or query window has expired. Start the local Transit service to refresh.' };
   return { ...value, cached: true };
 }
 export async function getBoard(station: string, at = ''): Promise<Board> {
