@@ -1,0 +1,10 @@
+import { spawn } from 'node:child_process';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+const cwd=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const npm=process.platform==='win32'?'npm.cmd':'npm';
+const children=[spawn(npm,['run','dev:api'],{cwd,stdio:'inherit',shell:process.platform==='win32'}),spawn(npm,['run','dev'],{cwd,stdio:'inherit',shell:process.platform==='win32'})];
+const stop=()=>children.forEach(child=>child.kill('SIGTERM'));
+process.on('SIGINT',stop);process.on('SIGTERM',stop);
+for(const child of children)child.on('exit',code=>{if(code!==0){stop();process.exit(code??1);}});
