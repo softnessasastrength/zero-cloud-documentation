@@ -32,3 +32,7 @@ See [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md), and [roadm
 ## Troubleshooting
 
 If storage is blocked, settings survive only the page session; export dashboards before leaving. If a request is rejected, check that its start is in the future and resource reservations do not overlap. A queued task may be waiting for approval, a dependency, a repair or sufficient battery. Use reset to begin a clean scenario without removing saved layouts. Fullscreen support depends on the browser. No environment secrets are needed.
+
+## Compound map
+
+Open **map** in the application bar or **explore the compound** on Start. Click a building (or use the area buttons), inspect its clankers, and open a fleet profile. Use +/− to zoom and scroll to pan. Toggle clankers, illustrative paths or fault-only markers. Run the simulator to see charging and assignment zones update. This is a fictional schematic, not a site survey or navigation system.
