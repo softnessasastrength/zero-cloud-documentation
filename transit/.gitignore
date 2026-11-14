@@ -2,3 +2,4 @@
 .percival-transit/
 __pycache__/
 fixtures/demo.zip
+smoke-report.json
