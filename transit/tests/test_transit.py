@@ -2,6 +2,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import timedelta
 from pathlib import Path
 from fixtures.make_demo import TABLES, build
@@ -77,7 +78,9 @@ class TransitTests(unittest.TestCase):
         again = import_feed(self.raw, self.store, 'changed', True)
         self.assertEqual(again, self.meta)
 
-    def test_api_contract(self):
+    @patch("percival_transit.__main__.board")
+    def test_api_contract(self, mock_board):
+        mock_board.side_effect = lambda *args, **kwargs: board(*args, now=self.now, **kwargs)
         for station in ('hartford', 'windsor-locks'):
             status, r = response('/v1/stations/' + station + '/departures?at=2026-11-15T05:00:00Z&hours=1', self.store)
             self.assertEqual(status, 200)
