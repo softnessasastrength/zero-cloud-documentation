@@ -27,7 +27,7 @@ def http_boards(store, at):
         base = line.split('Percival API: ', 1)[1]
         result = {}
         for station in ('hartford', 'windsor-locks'):
-            url = base + '/v1/stations/' + station + '/departures?hours=1&at=' + at.isoformat().replace('+00:00', 'Z')
+            url = base + '/v1/stations/' + station + '/departures?hours=24&at=' + at.isoformat().replace('+00:00', 'Z')
             try:
                 response = urllib.request.urlopen(url, timeout=10)
             except urllib.error.HTTPError as exc:
@@ -44,7 +44,7 @@ def http_boards(store, at):
             process.communicate()
 
 
-def run(fixture=False, raw=None):
+def run(fixture=False, raw=None, at=None):
     now = datetime.now(timezone.utc)
     report = dict(checked_at=now.isoformat(), source='fixture:generated-demo' if fixture else SOURCE,
                   terms=None if fixture else TERMS, fixture=fixture, result='Unknown')
@@ -72,10 +72,14 @@ def run(fixture=False, raw=None):
                       agencies=tables['agency'], routes=tables['routes'], trip_count=len(trips),
                       source_stops=[{'stop_id': k, 'stop_name': r['stop_name'],
                                      'parent_station': r.get('parent_station', '')} for k, r in stops.items()])
-        at = instant('2026-11-15T05:00:00Z') if fixture else now
+        at = at or (instant('2026-11-15T05:00:00Z') if fixture else now)
+        report['query_at'] = at.isoformat()
+        report['service_calendars'] = tables.get('calendar', [])
+        report['service_exceptions'] = tables.get('calendar_dates', [])
+        report['trip_patterns'] = [{'trip_id': k, 'route_id': r['route_id'], 'service_id': r['service_id'], 'headsign': r.get('trip_headsign'), 'direction_id': r.get('direction_id')} for k, r in trips.items()]
         with tempfile.TemporaryDirectory(prefix='percival-smoke-') as temp:
             import_feed(raw, temp, report['source'], fixture, now.isoformat())
-            report['boards'] = {s: board(temp, s, at=at, now=now, hours=1)
+            report['boards'] = {s: board(temp, s, at=at, now=now, hours=24)
                                 for s in ('hartford', 'windsor-locks')}
             report['http'] = http_boards(temp, at)
             for station, direct in report['boards'].items():
@@ -96,11 +100,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--fixture', action='store_true')
     parser.add_argument('--accept-source-terms', action='store_true')
+    parser.add_argument('--at', type=instant)
     parser.add_argument('--output', default='smoke-report.json')
     args = parser.parse_args()
     if not args.fixture and not args.accept_source_terms:
         parser.error('read source terms, then pass --accept-source-terms')
-    report = run(args.fixture)
+    report = run(args.fixture, at=args.at)
     Path(args.output).write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
     return 0 if report['result'] == 'Passed' else 1
