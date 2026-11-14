@@ -5,6 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
+const {fetch,setTimeout,console}=globalThis;
 const store=await mkdtemp(path.join(tmpdir(),'percival-real-browser-'));
 const transit=path.resolve('../transit');
 const imported=spawnSync('python3',['-m','percival_transit','--store',store,'import','--accept-source-terms'],{cwd:transit,encoding:'utf8'});
@@ -14,7 +15,7 @@ const api=spawn('python3',['-m','percival_transit','--store',store,'serve','--po
 const web=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4184','--strictPort'],{env:{...process.env,PERCIVAL_TRANSIT_PORT:'8766'},stdio:'ignore'});
 let browser;
 try{
- for(let n=0;n<100;n++){try{const r=await fetch('http://127.0.0.1:4184/transit-api/v1/health');if(r.ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+ for(let n=0;n<100;n++){try{const r=await fetch('http://127.0.0.1:4184/transit-api/v1/health');if(r.ok)break;}catch{ /* server is starting */ }await new Promise(r=>setTimeout(r,100));}
  browser=await chromium.launch();const page=await browser.newPage({viewport:{width:1366,height:1000}});
  await page.goto('http://127.0.0.1:4184/#/transit');
  await page.getByLabel('Query date/time (blank = now)').fill('2026-11-13T05:00:00-05:00');

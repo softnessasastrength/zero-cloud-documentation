@@ -151,6 +151,10 @@ transit() {
     printf 'Existing Transit checkout differs or contains edits; preserved %s\n' "$preview" >&2
     return 1
   fi
+  if [[ "$ref" =~ ^[0-9a-f]{40}$ && "$(git -C "$preview" rev-parse HEAD)" != "$ref" ]]; then
+    printf 'Transit checkout does not match the pinned commit; preserved %s\n' "$preview" >&2
+    return 1
+  fi
   install_node
   local PATH="$NODE/bin:$PATH"
   export PATH
@@ -182,6 +186,7 @@ transit() {
   WEB_PID=$!
   await_http http://127.0.0.1:4183/transit-api/v1/health "$WEB_PID"
   printf '\nOpen Chrome: http://localhost:4183/#/transit\nScheduled data only. Ollama is not required. Ctrl+C stops only this preview.\n'
+  if command -v xdg-open >/dev/null; then xdg-open "http://localhost:4183/#/transit" >/dev/null 2>&1 || true; fi
   wait -n "$WEB_PID" "$API_PID"
 }
 

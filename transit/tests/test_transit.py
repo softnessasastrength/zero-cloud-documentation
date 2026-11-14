@@ -89,6 +89,16 @@ class TransitTests(unittest.TestCase):
         self.assertEqual(response('/v1/stations/hartford/departures?at=nope', self.store)[0], 400)
         self.assertEqual(response('/v1/stations/hartford/departures?hours=nan', self.store)[0], 503)
 
+    def test_identical_authoritative_bytes_can_be_revalidated_without_mutation(self):
+        later = self.now + timedelta(days=8)
+        original = (self.store / self.meta['snapshot'] / 'metadata.json').read_bytes()
+        import_feed(self.raw, self.store, 'fixture:test', True, later.isoformat())
+        result = self.query(now=later)
+        self.assertEqual(result['status'], 'Scheduled')
+        self.assertEqual(result['snapshot_date'], self.meta['fetched_at'])
+        self.assertEqual(result['source_checked_at'], later.isoformat())
+        self.assertEqual((self.store / self.meta['snapshot'] / 'metadata.json').read_bytes(), original)
+
     def test_calendar_dates_only(self):
         tables = dict(TABLES)
         del tables['calendar']
