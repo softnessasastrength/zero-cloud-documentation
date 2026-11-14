@@ -1,0 +1,10 @@
+import { afterEach,it,expect } from 'vitest';
+import { render,screen,fireEvent,cleanup } from '@testing-library/react';
+import { HashRouter } from 'react-router-dom';
+import { CompoundMap } from '../src/pages/Map';
+import { createSimulation } from '../src/domain/seed';
+import { zoneForClanker } from '../src/domain/map';
+import { advance } from '../src/domain/engine';
+afterEach(cleanup);
+it('maps engine locations and does not guess unknown coordinates',()=>{const s=createSimulation();expect(zoneForClanker(s.fleet[0])).toBe('house');expect(zoneForClanker(advance(s,1).fleet[2])).toBe('charging');expect(zoneForClanker({...s.fleet[0],location:'Unknown'})).toBeUndefined();});
+it('selects zones by keyboard and opens the correct fleet profile',()=>{render(<HashRouter><CompoundMap/></HashRouter>);fireEvent.keyDown(screen.getByRole('button',{name:'Inspect Workshop'}),{key:'Enter'});expect(screen.getByRole('heading',{name:'Workshop'})).toBeInTheDocument();expect(screen.getByRole('link',{name:/Archibald Cogsworth/})).toHaveAttribute('href','#/fleet?resource=cogsworth');fireEvent.click(screen.getByRole('button',{name:'Zoom in'}));expect(screen.getByLabelText('Map zoom')).toHaveTextContent('125%');});
