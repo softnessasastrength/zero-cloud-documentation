@@ -7,10 +7,25 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from .core import SOURCE, board, import_feed, instant
 from .planner import round_trip, stations
+from .feeds import FEEDS, catalog, departures, feed_store
 
 
 def response(path, store):
     url = urlparse(path)
+    segments = url.path.strip('/').split('/')
+    if len(segments) == 4 and segments[:2] == ['v1', 'feeds'] and segments[2] in FEEDS:
+        feed = segments[2]
+        if segments[3] == 'catalog':
+            return 200, catalog(store, feed)
+        if segments[3] == 'departures':
+            query = parse_qs(url.query)
+            try:
+                if set(query) - {'route_id', 'stop_id', 'direction_id', 'at'} or any(len(v) != 1 for v in query.values()):
+                    raise ValueError('invalid parameters')
+                result = departures(store, feed, query['route_id'][0], query['stop_id'][0], query.get('direction_id', [None])[0], instant(query['at'][0]) if 'at' in query else None)
+                return (200 if result['status'] == 'Scheduled' else 503), result
+            except (KeyError, ValueError) as exc:
+                return 400, {'error': str(exc)}
     if url.path == '/v1/health':
         return 200, {'api_version': 'v1', 'service': 'percival-transit', 'live': False}
     if url.path == '/v1/stations':
@@ -46,8 +61,17 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     imp = commands.add_parser('import')
     imp.add_argument('file', nargs='?')
+    imp.add_argument('--feed', choices=FEEDS, default='rail')
     imp.add_argument('--fixture', action='store_true')
     imp.add_argument('--accept-source-terms', action='store_true')
+    bus = commands.add_parser('departures')
+    bus.add_argument('feed', choices=FEEDS)
+    bus.add_argument('route_id')
+    bus.add_argument('stop_id')
+    bus.add_argument('--direction-id')
+    bus.add_argument('--at', type=instant)
+    cat = commands.add_parser('catalog')
+    cat.add_argument('feed', choices=FEEDS)
     dep = commands.add_parser('board')
     dep.add_argument('station', choices=['hartford', 'windsor-locks'])
     dep.add_argument('--at', type=instant)
@@ -70,14 +94,20 @@ def main():
             if args.file:
                 raw = Path(args.file).read_bytes()
             else:
-                with urllib.request.urlopen(SOURCE, timeout=30) as stream:
+                with urllib.request.urlopen(FEEDS[args.feed]['url'], timeout=45) as stream:
                     raw = stream.read(20_000_001)
             if len(raw) > 20_000_000:
                 raise ValueError('archive exceeds 20 MB')
-            print(json.dumps(import_feed(raw, args.store, 'fixture:' + args.file if args.fixture else SOURCE, args.fixture), indent=2))
+            print(json.dumps(import_feed(raw, feed_store(args.store, args.feed), 'fixture:' + args.file if args.fixture else FEEDS[args.feed]['url'], args.fixture, selection=None if args.fixture else FEEDS[args.feed]['routes'], terms=FEEDS[args.feed]['terms']), indent=2))
         except Exception as exc:
             print(json.dumps({'status': 'Unknown', 'error': str(exc), 'current_snapshot_unchanged': True}))
             return 1
+    elif args.command == 'catalog':
+        print(json.dumps(catalog(args.store, args.feed), indent=2))
+    elif args.command == 'departures':
+        result = departures(args.store, args.feed, args.route_id, args.stop_id, args.direction_id, args.at)
+        print(json.dumps(result, indent=2))
+        return 0 if result['status'] == 'Scheduled' else 1
     elif args.command == 'plan':
         result = round_trip(args.store, args.origin, args.destination, args.depart_after, args.arrive_by, args.return_after, args.return_by, args.margin_minutes)
         print(json.dumps(result, indent=2))

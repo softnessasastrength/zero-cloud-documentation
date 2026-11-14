@@ -23,6 +23,14 @@ jobs:
       - name: Authoritative Hartford Line smoke
         run: python -m percival_transit.smoke --accept-source-terms --at 2026-11-13T05:00:00-05:00 --output source-smoke.json
         working-directory: transit
+      - name: CTtransit official selected routes
+        if: always()
+        run: python -m percival_transit.bus_smoke cttransit
+        working-directory: transit
+      - name: PVTA official selected routes
+        if: always()
+        run: python -m percival_transit.bus_smoke pvta
+        working-directory: transit
       - uses: actions/upload-artifact@v4
         if: always()
         with:
