@@ -25,6 +25,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 packages() {
+  [[ "${PERCIVAL_SKIP_PACKAGES:-}" == 1 ]] && return
   local package missing=()
   for package in "$@"; do
     if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then
@@ -53,6 +54,11 @@ checkout() {
 }
 
 install_node() {
+  if [[ "${PERCIVAL_USE_SYSTEM_NODE:-}" == 1 ]]; then
+    node -e 'if(Number(process.versions.node.split(".")[0])<22)process.exit(1)' || return 1
+    NODE=$(dirname "$(dirname "$(command -v node)")")
+    return
+  fi
   [[ -x "$NODE/bin/node" && -x "$NODE/bin/npm" ]] && return
   local arch
   case "$(uname -m)" in
@@ -129,6 +135,56 @@ metro() {
   wait -n "$WEB_PID" "$API_PID"
 }
 
+transit() {
+  packages git curl ca-certificates xz-utils python3 python3-venv tzdata
+  local ref=${PERCIVAL_TRANSIT_REF:-feat/percival-metro-preview}
+  local version=${ref//\//-}
+  local preview="${PERCIVAL_TRANSIT_LOCAL_CHECKOUT:-$ROOT/transit-previews/$version}" store="$ROOT/transit-data"
+  local remote=https://github.com/softnessasastrength/zero-cloud-documentation.git
+  mkdir -p "$ROOT/transit-previews" "$store"
+  if [[ ! -e "$preview" ]]; then
+    git clone --no-checkout "$remote" "$preview"
+    git -C "$preview" fetch origin "$ref"
+    git -C "$preview" checkout --detach FETCH_HEAD
+  fi
+  if [[ "$(git -C "$preview" remote get-url origin | sed 's/\.git$//')" != "${remote%.git}" || -n "$(git -C "$preview" status --porcelain --untracked-files=no)" ]]; then
+    printf 'Existing Transit checkout differs or contains edits; preserved %s\n' "$preview" >&2
+    return 1
+  fi
+  install_node
+  local PATH="$NODE/bin:$PATH"
+  export PATH
+  cd "$preview/transit"
+  python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)'
+  if [[ ! -x .venv/bin/python ]]; then python3 -m venv .venv; fi
+  local consent feed
+  printf '\nOfficial static schedule terms:\nCTtransit: https://www.cttransit.com/about/developers/terms-of-use\nPVTA: https://pvta.com/bus_service/real_time_data.php\n'
+  if [[ "${PERCIVAL_TRANSIT_ACCEPT_TERMS:-}" == yes ]]; then consent=y; else
+    read -r -p 'After reviewing these terms, accept and refresh the official feeds? [y/N] ' consent
+  fi
+  if [[ "$consent" == [yY] ]]; then
+    for feed in rail cttransit pvta; do
+      .venv/bin/python -m percival_transit --store "$store" import --feed "$feed" --accept-source-terms || printf 'Refresh failed for %s; retaining its last valid snapshot.\n' "$feed"
+    done
+  fi
+  # Separate preview ports; never reuse or terminate an existing Metro service.
+  local port
+  for port in 8765 4183; do
+    node -e 'const s=require("node:net").createServer();s.on("error",()=>process.exit(1));s.listen(Number(process.argv[1]),"127.0.0.1",()=>s.close())' "$port" || { printf 'Port %s is occupied; existing service preserved.\n' "$port"; return 1; }
+  done
+  .venv/bin/python -m percival_transit --store "$store" serve --port 8765 &
+  API_PID=$!
+  await_http http://127.0.0.1:8765/v1/health "$API_PID"
+  cd "$preview/playground"
+  if [[ ! -f node_modules/.percival-setup-complete ]]; then npm ci; touch node_modules/.percival-setup-complete; fi
+  npm run build
+  PERCIVAL_TRANSIT_PORT=8765 node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4183 --strictPort &
+  WEB_PID=$!
+  await_http http://127.0.0.1:4183/transit-api/v1/health "$WEB_PID"
+  printf '\nOpen Chrome: http://localhost:4183/#/transit\nScheduled data only. Ollama is not required. Ctrl+C stops only this preview.\n'
+  wait -n "$WEB_PID" "$API_PID"
+}
+
 chat() {
   packages git curl ca-certificates python3 python3-venv
   python3 -c 'import sys; sys.exit(None if sys.version_info >= (3, 11) else "Percival requires Python 3.11 or newer.")'
@@ -165,13 +221,14 @@ fi
 
 choice=${1:-}
 if [[ -z "$choice" ]]; then
-  printf '\nZeroCloud / Percival\n\n  1) Launch ZeroCloud PWA\n  2) Start Metro development server\n  3) Launch Percival terminal chat\n  q) Quit\n\n'
+  printf '\nZeroCloud / Percival\n\n  1) Launch ZeroCloud PWA\n  2) Start Metro development server\n  3) Launch Percival terminal chat\n  4) Launch Transit preview\n  q) Quit\n\n'
   read -r -p 'Choose [1]: ' choice
 fi
 case "${choice:-1}" in
   1|pwa) mkdir -p "$ROOT"; metro preview 4173 ;;
   2|dev) mkdir -p "$ROOT"; metro dev 5173 ;;
+  4|transit) mkdir -p "$ROOT"; transit ;;
   3|chat) mkdir -p "$ROOT"; chat ;;
   q|quit) exit 0 ;;
-  *) printf 'Usage: bash %s [pwa|dev|chat]\n' "$0" >&2; exit 2 ;;
+  *) printf 'Usage: bash %s [pwa|dev|chat|transit]\n' "$0" >&2; exit 2 ;;
 esac
