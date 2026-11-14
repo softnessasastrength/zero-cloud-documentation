@@ -1,4 +1,6 @@
 node_modules/
+.data*/
+*.tmp
 dist/
 *.tsbuildinfo
 test-results/

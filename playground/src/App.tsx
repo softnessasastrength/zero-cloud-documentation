@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { HashRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { Maximize, Pause, Play, SkipForward } from 'lucide-react';
 import { useStore, getPersistenceError } from './state/store';

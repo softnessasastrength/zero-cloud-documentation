@@ -13,6 +13,6 @@ flowchart TD
  Events --> UI
 ```
 
-Role filters are illustrative local controls, not authentication. No private real data should be entered. Persistence failures are surfaced in the shell. Simulation reset intentionally leaves browser configuration intact.
+The original household simulation remains a pure client-side demonstration. The resort simulator adds a separate local HTTP authority backed by a JSONL command journal and materialized snapshot. Restaurant confirmation changes table inventory, ZeroPay credits, employee protection and clanker assignment atomically. The client does not invent completion state; it reads receipts and current projections from the local API. A device-local IndexedDB outbox queues only reservation intents while disconnected. Those commands are revalidated on reconnection and can be marked rejected; the browser never labels a queued command confirmed.
 
-ADR 003: Use a local SVG schematic for the first map. `domain/map.ts` holds typed zone geometry and an explicit engine-location-to-zone mapping. `pages/Map.tsx` projects the existing simulation state without introducing a second fleet state or a map service dependency. Positions denote zones, not coordinates. Private task titles use the same canSee policy as other screens. The map contains no external tiles, location permission or tracking infrastructure.
+The API binds to loopback and is an unauthenticated, single-writer development service. Guest/employee/operator selectors are prototype role previews, not an authorization boundary. Never put real guest, employee, or payment data in this app. The existing role filters are illustrative; a deployed shared system requires a separate identity, policy, and capability broker before it is exposed beyond one machine.

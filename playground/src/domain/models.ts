@@ -1,5 +1,5 @@
 import { z } from 'zod';
-export type Role = 'proprietor-a' | 'proprietor-b' | 'engineer' | 'guest';
+export type Role = 'proprietor-a' | 'proprietor-b' | 'employee' | 'engineer' | 'guest';
 export type Status = 'queued' | 'preparing' | 'completed' | 'failed';
 export interface Task { id:string; requestId:string; correlationId:string; title:string; resourceId:string; start:number; duration:number; dependencies:string[]; status:Status; startedAt?:number; completedAt?:number; scope:'shared'|'proprietor-a'|'proprietor-b'; approval:boolean; approved:boolean; }
 export interface Clanker { id:string; name:string; role:string; location:string; battery:number; health:'healthy'|'fault'; charging:boolean; firmware:string; temperature:number; maintenance:string[]; }
