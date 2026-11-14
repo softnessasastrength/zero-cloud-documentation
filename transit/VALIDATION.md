@@ -57,3 +57,19 @@ to select the PDF for a new travel date. The agency publishes a separate
 [November 16 timetable](https://hartfordline.com/wp-content/uploads/2026/11/HL-1116-New-Service-Portal-North-Bridge-Outage-Ends_v1.pdf).
 The current CLI and API still read GTFS. PDF ingestion and runtime precedence
 remain implementation work.
+
+### Discrepancies to cover in the PDF-backed boards
+
+The same weekday southbound PDF table lists a 5:59 a.m. Windsor Locks
+departure. The GTFS smoke query began at 5:00 a.m. Eastern, but its board
+has no 5:59 a.m. entry. The 8:49 a.m. Windsor Locks time is in the PDF's
+northbound table, whose column continues to Springfield. The corresponding
+GTFS smoke row says “Northbound to Hartford,” and its trip ID also appears
+at Windsor Locks after the Hartford stop. A board should derive the trip's
+onward destination from the applicable timetable or verified stop sequence
+when the feed headsign conflicts. Copying the feed headsign into that board
+would give riders the wrong destination.
+
+The PDF-backed acceptance check should exercise both differences, preserve
+the effective-period boundary on November 16, and check published
+substitution notes before treating a timetable column as a train.
