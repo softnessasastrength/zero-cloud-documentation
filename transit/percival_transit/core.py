@@ -33,12 +33,29 @@ def seconds(value):
     return h * 3600 + m * 60 + s
 
 
-def load(raw):
+def load(raw, selection=None):
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         if sum(i.file_size for i in z.infolist()) > 100_000_000:
             raise ValueError('feed exceeds expanded size limit')
-        tables = {n[:-4]: list(csv.DictReader(io.StringIO(z.read(n).decode('utf-8-sig'))))
-                  for n in z.namelist() if n.endswith('.txt') and '/' not in n}
+        def rows(name):
+            if name + '.txt' not in z.namelist():
+                return []
+            return list(csv.DictReader(io.StringIO(z.read(name + '.txt').decode('utf-8-sig'))))
+        routes = rows('routes')
+        if selection:
+            routes = [r for r in routes if r['route_id'] in selection or r.get('route_short_name') in selection]
+        route_ids = {r['route_id'] for r in routes}
+        trips = [r for r in rows('trips') if not selection or r['route_id'] in route_ids]
+        trip_ids = {r['trip_id'] for r in trips}
+        services = {r['service_id'] for r in trips}
+        with z.open('stop_times.txt') as stream:
+            events = [r for r in csv.DictReader(io.TextIOWrapper(stream, encoding='utf-8-sig')) if r['trip_id'] in trip_ids]
+        tables = {'routes': routes, 'trips': trips, 'stop_times': events,
+                  'stops': rows('stops'), 'agency': rows('agency')}
+        for name in ('calendar', 'calendar_dates'):
+            tables[name] = [r for r in rows(name) if not selection or r['service_id'] in services]
+        for name in ('feed_info', 'transfers', 'frequencies'):
+            tables[name] = rows(name)
     for name in ('agency', 'stops', 'routes', 'trips', 'stop_times'):
         if not tables.get(name):
             raise ValueError('missing or empty ' + name)
@@ -124,8 +141,8 @@ def active(tables, service, d):
                r[WEEK[d.weekday()]] == '1' for r in tables.get('calendar', []))
 
 
-def import_feed(raw, store, source, fixture=False, fetched_at=None):
-    load(raw)  # validate before publishing; failed imports never replace current
+def import_feed(raw, store, source, fixture=False, fetched_at=None, selection=None, terms=TERMS):
+    load(raw, selection)  # validate before publishing; failed imports never replace current
     digest = hashlib.sha256(raw).hexdigest()
     root = Path(store)
     root.mkdir(parents=True, exist_ok=True)
@@ -136,7 +153,7 @@ def import_feed(raw, store, source, fixture=False, fetched_at=None):
         temp = Path(tempfile.mkdtemp(prefix='.import-', dir=root))
         (temp / 'feed.zip').write_bytes(raw)
         (temp / 'metadata.json').write_text(json.dumps(dict(snapshot=digest, source=source,
-            fetched_at=fetched_at or datetime.now(UTC).isoformat(), fixture=fixture, terms=TERMS)))
+            fetched_at=fetched_at or datetime.now(UTC).isoformat(), fixture=fixture, terms=terms, selection=selection)))
         for p in temp.iterdir():
             p.chmod(0o444)
         try:
@@ -147,19 +164,30 @@ def import_feed(raw, store, source, fixture=False, fetched_at=None):
             if not target.exists():
                 raise
     # Re-importing identical bytes deliberately does not refresh the original acquisition time.
-    pointer = root / '.current.tmp'
+    # Keep acquisition metadata immutable, but record each successful revalidation.
+    verified_at = fetched_at or datetime.now(UTC).isoformat()
+    checks = root / 'checks' / digest
+    checks.mkdir(parents=True, exist_ok=True)
+    import uuid
+    observation = checks / (uuid.uuid4().hex + '.json')
+    observation.write_text(json.dumps(dict(snapshot=digest, verified_at=verified_at, source=source)))
+    observation.chmod(0o444)
+    verification = root / ('.verified-' + uuid.uuid4().hex)
+    verification.write_text(observation.read_text())
+    verification.replace(root / ('verified-' + digest + '.json'))
+    pointer = root / ('.current-' + uuid.uuid4().hex)
     pointer.write_text(digest)
     pointer.replace(root / 'current')
     return json.loads((target / 'metadata.json').read_text())
 
 
-def board(store, station, at=None, now=None, hours=24, max_age_days=7):
+def board(store, station, at=None, now=None, hours=24, max_age_days=7, route_id=None, direction_id=None, compiled=None):
     now = now or datetime.now(UTC)
     at = at or now
     result = dict(api_version='v1', status='Unknown', station=station, queried_at=at.isoformat(),
                   checked_at=now.isoformat(), departures=[], live=False)
     try:
-        if station not in ('hartford', 'windsor-locks'):
+        if station not in ('hartford', 'windsor-locks') and not station.startswith('stop:'):
             raise ValueError('unknown station')
         if not 0 < hours <= 48 or max_age_days <= 0:
             raise ValueError('invalid query bounds')
@@ -173,19 +201,31 @@ def board(store, station, at=None, now=None, hours=24, max_age_days=7):
         meta = json.loads((root / digest / 'metadata.json').read_text())
         result.update(snapshot=digest, source=meta['source'], snapshot_date=meta['fetched_at'], fixture=meta['fixture'])
         age = now - instant(meta['fetched_at'])
-        if age < timedelta(0) or age > timedelta(days=max_age_days):
+        result['snapshot_age_seconds'] = age.total_seconds()
+        result['freshness_limit_seconds'] = max_age_days * 86400
+        verification = Path(store) / ('verified-' + digest + '.json')
+        verified_at = json.loads(verification.read_text())['verified_at'] if verification.exists() else meta['fetched_at']
+        result['source_checked_at'] = verified_at
+        check_age = now - instant(verified_at)
+        result['verification_age_seconds'] = check_age.total_seconds()
+        if check_age < timedelta(0) or check_age > timedelta(days=max_age_days):
             raise ValueError('stale or future snapshot')
-        tables, stops, trips, zone, start, end = load(raw)
+        tables, stops, trips, zone, start, end = (compiled or load(raw, meta.get('selection')))
         result.update(agency_timezone=str(zone), coverage_start=str(start), coverage_end=str(end))
         # Exact normalized source names; never infer IDs from coordinates or fuzzy matching.
         names = {'hartford': {'hartford', 'hartford union station'},
-                 'windsor-locks': {'windsor locks', 'windsor locks station'}}[station]
-        ids = {sid for sid, r in stops.items() if r['stop_name'].strip().casefold() in names}
+                 'windsor-locks': {'windsor locks', 'windsor locks station'}}.get(station, set())
+        ids = {sid for sid, r in stops.items() if r['stop_name'].strip().casefold() in names or station == 'stop:' + sid}
         ids |= {sid for sid, r in stops.items() if r.get('parent_station') in ids}
         if not ids:
             raise ValueError('station identity absent from feed')
         result['source_stop_ids'] = sorted(ids)
         until = at + timedelta(hours=hours)
+        # This acquired version predates the published Nov 16 timetable change.
+        if digest == '03e8bc27defd6b3a501c760592ad0ed196b5b88db0a5380ba855e55c999f9d0d':
+            result['verified_coverage_end'] = '2026-11-15'
+            if until.astimezone(zone).date() > date(2026,11,15):
+                raise ValueError('Published Hartford Line timetable changes November 16; this snapshot has not been reconciled with that schedule.')
         if at.astimezone(zone).date() < start or until.astimezone(zone).date() > end:
             raise ValueError('query window outside feed coverage')
         first = at.astimezone(zone).date() - timedelta(days=2)
@@ -197,6 +237,10 @@ def board(store, station, at=None, now=None, hours=24, max_age_days=7):
                 epoch = datetime.combine(d, time(12), zone).astimezone(UTC) - timedelta(hours=12)
                 for r in tables['stop_times']:
                     trip = trips[r['trip_id']]
+                    if route_id is not None and trip['route_id'] != route_id:
+                        continue
+                    if direction_id is not None and trip.get('direction_id', '') != direction_id:
+                        continue
                     if r['_terminal'] or r['stop_id'] not in ids or r.get('pickup_type', '0') not in ('', '0'):
                         continue
                     departure = epoch + timedelta(seconds=r['_seconds'])
@@ -204,6 +248,8 @@ def board(store, station, at=None, now=None, hours=24, max_age_days=7):
                         result['departures'].append(dict(status='Scheduled', departure=departure.astimezone(zone).isoformat(),
                             service_date=str(d), source_trip_id=r['trip_id'], source_stop_id=r['stop_id'],
                             route_id=trip['route_id'], headsign=trip.get('trip_headsign', ''),
+                            direction_id=trip.get('direction_id', ''), train_number=trip.get('trip_short_name', ''),
+                            destination=stops[next(e['stop_id'] for e in tables['stop_times'] if e['trip_id'] == r['trip_id'] and e['_terminal'])]['stop_name'],
                             gtfs_departure_time=r['departure_time'], snapshot=digest, snapshot_date=meta['fetched_at'],
                             source=meta['source'], fixture=meta['fixture']))
             d += timedelta(days=1)

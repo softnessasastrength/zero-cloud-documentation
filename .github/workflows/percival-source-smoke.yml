@@ -1,0 +1,45 @@
+name: Percival source smoke
+on:
+  pull_request:
+    paths: ['transit/**', '.github/workflows/percival-source-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Deterministic tests
+        run: python -m unittest discover -s tests -v
+        working-directory: transit
+      - name: Fixture HTTP smoke
+        run: python -m percival_transit.smoke --fixture --output fixture-smoke.json
+        working-directory: transit
+      - name: Authoritative Hartford Line smoke
+        run: python -m percival_transit.smoke --accept-source-terms --at 2026-11-13T05:00:00-05:00 --output source-smoke.json
+        working-directory: transit
+      - name: CTtransit official selected routes
+        if: always()
+        run: python -m percival_transit.bus_smoke cttransit
+        working-directory: transit
+      - name: PVTA official selected routes
+        if: always()
+        run: python -m percival_transit.bus_smoke pvta
+        working-directory: transit
+      - name: PDF text verification tools
+        if: always()
+        run: sudo apt-get update -qq && sudo apt-get install -y poppler-utils tesseract-ocr
+      - name: Dated official PDF evidence
+        if: always()
+        run: python -m percival_transit.pdf_check
+        working-directory: transit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: percival-smoke-reports
+          path: transit/*-smoke.json

@@ -6,10 +6,57 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from .core import SOURCE, board, import_feed, instant
+from .planner import round_trip, stations, explore
+from .connections import INTERCHANGES
+from .feeds import FEEDS, catalog, departures, feed_store
 
 
 def response(path, store):
     url = urlparse(path)
+    segments = url.path.strip('/').split('/')
+    if len(segments) == 4 and segments[:2] == ['v1', 'feeds'] and segments[2] in FEEDS:
+        feed = segments[2]
+        if segments[3] == 'catalog':
+            return 200, catalog(store, feed)
+        if segments[3] == 'departures':
+            query = parse_qs(url.query)
+            try:
+                if set(query) - {'route_id', 'stop_id', 'direction_id', 'at'} or any(len(v) != 1 for v in query.values()):
+                    raise ValueError('invalid parameters')
+                result = departures(store, feed, query['route_id'][0], query['stop_id'][0], query.get('direction_id', [None])[0], instant(query['at'][0]) if 'at' in query else None)
+                return (200 if result['status'] == 'Scheduled' else 503), result
+            except (KeyError, ValueError) as exc:
+                return 400, {'error': str(exc)}
+    if url.path == '/v1/connections':
+        return 200, dict(api_version='v1', status='Unknown', interchanges=INTERCHANGES, reason='Walking-transfer evidence is incomplete; no complete connection is claimed.')
+    if url.path in ('/v1/explore', '/v1/intercity'):
+        query = parse_qs(url.query)
+        try:
+            feed = query.get('feed', ['pvta'])[0]
+            origin = query['origin'][0]
+            leave = instant(query['leave_after'][0])
+            back = instant(query['back_by'][0])
+            if url.path == '/v1/intercity':
+                return 503, dict(api_version='v1', status='Unknown', reason='Dated Amtrak schedule and walking links to intercity rail are not verified.', missing_links=['Amtrak dated schedule with usable terms', 'Origin bus to intercity rail walking paths', 'Complete final bus return to origin'], destination=query.get('destination', ['NYP'])[0], sources={f:catalog(store,f)['status'] for f in FEEDS})
+            result = explore(feed_store(store, feed), origin, leave, back, float(query.get('min_minutes', ['60'])[0]), query.get('sort', ['time_there'])[0])
+            return (200 if result['status'] == 'Scheduled' else 503), result
+        except (KeyError, ValueError) as exc:
+            return 400, {'error': str(exc)}
+    if url.path == '/v1/health':
+        return 200, {'api_version': 'v1', 'service': 'percival-transit', 'live': False}
+    if url.path == '/v1/stations':
+        return 200, stations(store)
+    if url.path == '/v1/round-trip':
+        query = parse_qs(url.query)
+        required = {'origin', 'destination', 'depart_after', 'arrive_by', 'return_after', 'return_by'}
+        try:
+            if not required <= set(query) or set(query) - required - {'margin_minutes'} or any(len(v) != 1 for v in query.values()):
+                raise ValueError('provide origin, destination and all four offset timestamps')
+            values = {k: instant(query[k][0]) for k in required - {'origin', 'destination'}}
+            result = round_trip(store, query['origin'][0], query['destination'][0], **values, margin_minutes=float(query.get('margin_minutes', ['10'])[0]))
+            return (503 if result['status'] == 'Unknown' else 200), result
+        except ValueError as exc:
+            return 400, {'error': str(exc)}
     parts = url.path.strip('/').split('/')
     if len(parts) != 4 or parts[:2] != ['v1', 'stations'] or parts[3] != 'departures':
         return 404, {'error': 'Use /v1/stations/{hartford|windsor-locks}/departures'}
@@ -30,12 +77,34 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     imp = commands.add_parser('import')
     imp.add_argument('file', nargs='?')
+    imp.add_argument('--feed', choices=FEEDS, default='rail')
     imp.add_argument('--fixture', action='store_true')
     imp.add_argument('--accept-source-terms', action='store_true')
+    bus = commands.add_parser('departures')
+    bus.add_argument('feed', choices=FEEDS)
+    bus.add_argument('route_id')
+    bus.add_argument('stop_id')
+    bus.add_argument('--direction-id')
+    bus.add_argument('--at', type=instant)
+    exp = commands.add_parser('explore')
+    exp.add_argument('feed', choices=FEEDS)
+    exp.add_argument('origin')
+    exp.add_argument('--leave-after', type=instant, required=True)
+    exp.add_argument('--back-by', type=instant, required=True)
+    exp.add_argument('--min-minutes', type=float, default=60)
+    exp.add_argument('--sort', choices=['time_there','transfers','travel_time'], default='time_there')
+    cat = commands.add_parser('catalog')
+    cat.add_argument('feed', choices=FEEDS)
     dep = commands.add_parser('board')
     dep.add_argument('station', choices=['hartford', 'windsor-locks'])
     dep.add_argument('--at', type=instant)
     dep.add_argument('--hours', type=float, default=24)
+    plan = commands.add_parser('plan')
+    plan.add_argument('origin')
+    plan.add_argument('destination')
+    for name in ('depart-after', 'arrive-by', 'return-after', 'return-by'):
+        plan.add_argument('--' + name, type=instant, required=True)
+    plan.add_argument('--margin-minutes', type=float, default=10)
     api = commands.add_parser('serve')
     api.add_argument('--port', type=int, default=8765)
     args = parser.parse_args()
@@ -48,14 +117,28 @@ def main():
             if args.file:
                 raw = Path(args.file).read_bytes()
             else:
-                with urllib.request.urlopen(SOURCE, timeout=30) as stream:
+                with urllib.request.urlopen(urllib.request.Request(FEEDS[args.feed]['url'], headers={'User-Agent':'PercivalTransit/0.1 (+local scheduled transit preview)'}), timeout=45) as stream:
                     raw = stream.read(20_000_001)
             if len(raw) > 20_000_000:
                 raise ValueError('archive exceeds 20 MB')
-            print(json.dumps(import_feed(raw, args.store, 'fixture:' + args.file if args.fixture else SOURCE, args.fixture), indent=2))
+            print(json.dumps(import_feed(raw, feed_store(args.store, args.feed), 'fixture:' + args.file if args.fixture else FEEDS[args.feed]['url'], args.fixture, selection=None if args.fixture else FEEDS[args.feed]['routes'], terms=FEEDS[args.feed]['terms']), indent=2))
         except Exception as exc:
             print(json.dumps({'status': 'Unknown', 'error': str(exc), 'current_snapshot_unchanged': True}))
             return 1
+    elif args.command == 'explore':
+        result = explore(feed_store(args.store, args.feed), args.origin, args.leave_after, args.back_by, args.min_minutes, args.sort)
+        print(json.dumps(result, indent=2))
+        return 0 if result['status'] == 'Scheduled' else 1
+    elif args.command == 'catalog':
+        print(json.dumps(catalog(args.store, args.feed), indent=2))
+    elif args.command == 'departures':
+        result = departures(args.store, args.feed, args.route_id, args.stop_id, args.direction_id, args.at)
+        print(json.dumps(result, indent=2))
+        return 0 if result['status'] == 'Scheduled' else 1
+    elif args.command == 'plan':
+        result = round_trip(args.store, args.origin, args.destination, args.depart_after, args.arrive_by, args.return_after, args.return_by, args.margin_minutes)
+        print(json.dumps(result, indent=2))
+        return 0 if result['status'] == 'Scheduled' else 1
     elif args.command == 'board':
         result = board(args.store, args.station, at=args.at, hours=args.hours)
         print(json.dumps(result, indent=2))
@@ -72,7 +155,7 @@ def main():
                 self.end_headers()
                 self.wfile.write(raw)
         server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
-        print(f'Percival API: http://127.0.0.1:{args.port}', flush=True)
+        print(f'Percival API: http://127.0.0.1:{server.server_port}', flush=True)
         server.serve_forever()
     return 0
 
