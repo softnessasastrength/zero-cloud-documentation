@@ -173,6 +173,8 @@ def board(store, station, at=None, now=None, hours=24, max_age_days=7):
         meta = json.loads((root / digest / 'metadata.json').read_text())
         result.update(snapshot=digest, source=meta['source'], snapshot_date=meta['fetched_at'], fixture=meta['fixture'])
         age = now - instant(meta['fetched_at'])
+        result['snapshot_age_seconds'] = age.total_seconds()
+        result['freshness_limit_seconds'] = max_age_days * 86400
         if age < timedelta(0) or age > timedelta(days=max_age_days):
             raise ValueError('stale or future snapshot')
         tables, stops, trips, zone, start, end = load(raw)
