@@ -11,7 +11,7 @@ from percival_transit.smoke import run
 class SmokeTests(unittest.TestCase):
     def test_fixture_report_includes_both_http_boards(self):
         def fake_http(store, at):
-            return {s: {'http_status': 200, 'body': board(store, s, at=at, hours=1)}
+            return {s: {'http_status': 200, 'body': board(store, s, at=at, hours=24)}
                     for s in ('hartford', 'windsor-locks')}
         with patch('percival_transit.smoke.http_boards', side_effect=fake_http):
             report = run(fixture=True)

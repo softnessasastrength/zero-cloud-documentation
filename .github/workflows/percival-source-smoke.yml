@@ -21,7 +21,7 @@ jobs:
         run: python -m percival_transit.smoke --fixture --output fixture-smoke.json
         working-directory: transit
       - name: Authoritative Hartford Line smoke
-        run: python -m percival_transit.smoke --accept-source-terms --output source-smoke.json
+        run: python -m percival_transit.smoke --accept-source-terms --at 2026-11-13T05:00:00-05:00 --output source-smoke.json
         working-directory: transit
       - uses: actions/upload-artifact@v4
         if: always()
