@@ -23,7 +23,7 @@ def feed_store(root, feed):
 
 
 @lru_cache(maxsize=3)
-def snapshot(root, digest):
+def _cached_snapshot(root, digest, raw_modified, metadata_modified):
     if not re.fullmatch('[a-f0-9]{64}', digest):
         raise ValueError('invalid snapshot')
     path = Path(root) / digest
@@ -32,6 +32,17 @@ def snapshot(root, digest):
         raise ValueError('checksum mismatch')
     meta = json.loads((path / 'metadata.json').read_text())
     return meta, load(raw, meta.get('selection'))
+
+
+def snapshot(root, digest):
+    if not re.fullmatch('[a-f0-9]{64}', digest):
+        raise ValueError('invalid snapshot')
+    path = Path(root) / digest
+    raw = (path / 'feed.zip').read_bytes()
+    if hashlib.sha256(raw).hexdigest() != digest:
+        raise ValueError('checksum mismatch')
+    return _cached_snapshot(root, digest, (path/'feed.zip').stat().st_mtime_ns,
+                            (path/'metadata.json').stat().st_mtime_ns)
 
 
 def catalog(root, feed, now=None):
@@ -59,7 +70,10 @@ def catalog(root, feed, now=None):
         result['patterns'] = list(patterns.values())
         served = {r['stop_id'] for r in tables['stop_times']}
         result['stops'] = [dict(stop_id=k, stop_name=r['stop_name'], stop_lat=r.get('stop_lat'), stop_lon=r.get('stop_lon')) for k, r in stops.items() if k in served]
-        if not 0 <= age <= 7*86400:
+        verification = store / ('verified-' + digest + '.json')
+        verified_at = json.loads(verification.read_text())['verified_at'] if verification.exists() else meta['fetched_at']
+        result['source_checked_at'] = verified_at
+        if not 0 <= (now-instant(verified_at)).total_seconds() <= 7*86400:
             raise ValueError('stale or future snapshot')
         result.update(status='Scheduled', reason='Static timetable catalog; no live status. PVTA data is sourced from PVTA; no agency endorsement.')
     except (OSError, ValueError, KeyError, TypeError) as exc:

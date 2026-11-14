@@ -164,7 +164,18 @@ def import_feed(raw, store, source, fixture=False, fetched_at=None, selection=No
             if not target.exists():
                 raise
     # Re-importing identical bytes deliberately does not refresh the original acquisition time.
-    pointer = root / '.current.tmp'
+    # Keep acquisition metadata immutable, but record each successful revalidation.
+    verified_at = fetched_at or datetime.now(UTC).isoformat()
+    checks = root / 'checks' / digest
+    checks.mkdir(parents=True, exist_ok=True)
+    import uuid
+    observation = checks / (uuid.uuid4().hex + '.json')
+    observation.write_text(json.dumps(dict(snapshot=digest, verified_at=verified_at, source=source)))
+    observation.chmod(0o444)
+    verification = root / ('.verified-' + uuid.uuid4().hex)
+    verification.write_text(observation.read_text())
+    verification.replace(root / ('verified-' + digest + '.json'))
+    pointer = root / ('.current-' + uuid.uuid4().hex)
     pointer.write_text(digest)
     pointer.replace(root / 'current')
     return json.loads((target / 'metadata.json').read_text())
@@ -192,7 +203,12 @@ def board(store, station, at=None, now=None, hours=24, max_age_days=7, route_id=
         age = now - instant(meta['fetched_at'])
         result['snapshot_age_seconds'] = age.total_seconds()
         result['freshness_limit_seconds'] = max_age_days * 86400
-        if age < timedelta(0) or age > timedelta(days=max_age_days):
+        verification = Path(store) / ('verified-' + digest + '.json')
+        verified_at = json.loads(verification.read_text())['verified_at'] if verification.exists() else meta['fetched_at']
+        result['source_checked_at'] = verified_at
+        check_age = now - instant(verified_at)
+        result['verification_age_seconds'] = check_age.total_seconds()
+        if check_age < timedelta(0) or check_age > timedelta(days=max_age_days):
             raise ValueError('stale or future snapshot')
         tables, stops, trips, zone, start, end = (compiled or load(raw, meta.get('selection')))
         result.update(agency_timezone=str(zone), coverage_start=str(start), coverage_end=str(end))

@@ -37,7 +37,7 @@ curl 'http://127.0.0.1:8765/v1/stations/hartford/departures?at=2026-11-15T05:00:
 curl 'http://127.0.0.1:8765/v1/stations/windsor-locks/departures?at=2026-11-15T05:00:00Z&hours=1'
 ```
 
-Fixture snapshots become stale seven days after import too. Regenerating/importing identical bytes does not refresh their acquisition time. Use a new empty demo store for a later demonstration. Explicit `--at` timestamps query historical schedules but do not bypass freshness evaluated against the actual clock.
+Fixture snapshots become stale seven days after the last successful import too. Reimporting identical bytes keeps the original acquisition metadata and adds a separate successful source-check observation. Explicit `--at` timestamps query historical schedules but do not bypass freshness evaluated against the actual clock.
 
 ## Import the authoritative feed
 
@@ -71,7 +71,7 @@ Station aliases are `hartford` and `windsor-locks`; source IDs are discovered on
 
 `GET /v1/stations/{hartford|windsor-locks}/departures?at=<ISO timestamp with offset>&hours=24`. Window is 0–48 elapsed hours. Defaults to current time and 24 hours. `Scheduled` (HTTP 200) means a valid fresh timetable, including an empty board when no service is scheduled. Calendar removal is absence of scheduled service, never a realtime cancellation claim. `Unknown` (HTTP 503) means missing, corrupt, stale, unsupported, unidentified station, or outside coverage; it has an explanatory `reason` and no departures. Bad parameter syntax returns 400; other paths 404. CLI boards exit 1 for Unknown. No endpoint emits live status; `live` is always false.
 
-Archives live in `.percival-transit/<sha256>/feed.zip`, with read-only original bytes and metadata. Imports validate before atomically switching `current`; invalid downloads leave the last good snapshot intact. Each query rechecks SHA-256 and validation. Retention is manual; no automatic archive deletion. Acquisition metadata is first-write and identical bytes retain the original timestamp. A failed refresh leaves the explicitly dated last-known-good snapshot usable until the seven-day local freshness limit. Seven days is a conservative application policy, not an agency refresh promise. Filesystem owners can change permissions; this is content-addressed local storage, not tamper-proof storage.
+Archives live in `.percival-transit/<sha256>/feed.zip`, with read-only original bytes and metadata. Imports validate before atomically switching `current`; invalid downloads leave the last good snapshot intact. Each query rechecks SHA-256 and validation. Retention is manual; no automatic archive deletion. Acquisition metadata is first-write and identical bytes retain the original timestamp; immutable source-check observations separately record successful revalidation. A failed refresh leaves the explicitly dated last-known-good snapshot usable until seven days after its last successful source check. Seven days is a conservative application policy, not an agency refresh promise. Filesystem owners can change permissions; this is content-addressed local storage, not tamper-proof storage.
 
 Validation covers required tables, primary/foreign keys, timezone, dates, exceptions, source times and monotonic stop sequences. Calendar-dates-only feeds work. Pickup-restricted stops are not advertised as ordinary departures. Frequency-based feeds, blank/interpolated times and GTFS times beyond 47:59:59 are rejected rather than estimated. One agency timezone is supported; no timezone is hardcoded for real data. Dates use agency-local service days; event instants use GTFS local noon minus 12 elapsed hours, then add GTFS elapsed seconds in UTC. Previous service dates are scanned for >24:00 events. Coverage bounds are calendar bounds, including exceptions; a gap inside them is a valid empty service day. A query crossing the final coverage day is Unknown rather than silently truncated. Static data cannot prove operation, delays or cancellations.
 
@@ -80,3 +80,18 @@ Validation covers required tables, primary/foreign keys, timezone, dates, except
 See `VALIDATION.md` for exact executed checks. The deterministic suite includes both station boards, provenance, overnight dates, spring/fall DST, holiday addition/removal, exception-only calendars, invalid feeds, checksum corruption, immutable reimports, stale/missing snapshots and API responses. No Lumia support is claimed.
 
 Desktop Linux uses the same Python commands. Android Termux: `pkg install python tzdata git`, clone into a separate directory, `cd percival-transit/transit`, then run the Python commands above (venv optional). Termux and Chromebook hardware, Chrome-to-Crostini localhost forwarding, package installation and real agency downloads still require device verification.
+
+## Three-feed preview and Explore
+
+Source verification is now recorded in [SOURCES.md](SOURCES.md), superseding the initial blocked-smoke note above. Official downloads succeeded in Actions. Bus imports maintain independent stores under the root store:
+
+```bash
+python -m percival_transit import --feed cttransit --accept-source-terms
+python -m percival_transit import --feed pvta --accept-source-terms
+python -m percival_transit catalog pvta
+python -m percival_transit departures pvta G5 1862 --at 2026-11-13T04:00:00-05:00
+python -m percival_transit departures cttransit 16545 7919 --at 2026-11-13T04:00:00-05:00
+python -m percival_transit explore pvta 10006 --leave-after 2026-11-13T06:00:00-05:00 --back-by 2026-11-13T18:00:00-05:00 --min-minutes 60
+```
+
+The selected-route compiler validates the requested route subset and its source dependencies, not every unrelated route in a statewide archive. Catalogs expose actual route IDs, direction/headsign patterns and served stops. `/v1/feeds/{rail|cttransit|pvta}/catalog` and `/departures?route_id=...&stop_id=...&direction_id=...&at=...` use the same data as the CLI. `/v1/explore?feed=pvta&origin=10006&leave_after=...&back_by=...&min_minutes=60&sort=time_there` returns up to six complete same-feed round trips among an initial 24 destination candidates. Sort also accepts `transfers` and `travel_time`. Every leg resolves to a source trip, dated service and snapshot. Same-stop transfers obey the user's margin and applicable source transfer rules; no coordinate-based walking edges are inferred. NYP/BOS and cross-agency links remain Unknown with named missing evidence.
