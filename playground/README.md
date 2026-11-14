@@ -36,38 +36,6 @@ For the local resort service contract and hardware feasibility status, see [simu
 
 If storage is blocked, settings survive only the page session; export dashboards before leaving. If a request is rejected, check that its start is in the future and resource reservations do not overlap. A queued task may be waiting for approval, a dependency, a repair or sufficient battery. Use reset to begin a clean scenario without removing saved layouts. Fullscreen support depends on the browser. No environment secrets are needed.
 
-## Android, Chromebook, and desktop setup
+## Compound map
 
-### Android with Termux
-
-Install Node.js and Git in Termux, clone the repository, and install packages:
-
-```sh
-pkg update && pkg install nodejs-lts git
-git clone https://github.com/softnessasastrength/zero-cloud-documentation.git
-cd zero-cloud-documentation/playground
-npm ci
-npm run build
-```
-
-In one Termux session run `npm run simulator`. In a second run `npm run preview -- --host 127.0.0.1 --port 4173`, then open `http://localhost:4173` in Chrome and install ZeroCloud from Chrome's install menu. The local API stays bound to the phone; do not change its host to expose this unauthenticated prototype to a network. Android PWA installation is supported by the web platform, but physical device smoke testing has not been performed.
-
-### Chromebook / Crostini
-
-Run the [Chromebook launcher](scripts/percival-chromebook.sh) in the Linux Terminal:
-
-```sh
-bash scripts/percival-chromebook.sh
-```
-
-The menu defaults to the production PWA. Open `http://localhost:4173/#/resort` in ChromeOS Chrome and use **Install page as app** in the Chrome menu. Keep the Linux Terminal running while you use the simulator. The menu also offers a development server and optional local Percival chat via Ollama.
-
-The launcher prepares pinned checkouts in `~/.local/share/percival-chromebook` and installs missing dependencies for the selected mode. The Metro simulator uses synthetic resort data.
-
-In the Linux container, install Node 22+ and Git, clone the repository, then run `cd zero-cloud-documentation/playground && npm ci && npm run dev:stack`. Open the Vite URL in ChromeOS. For an installable production preview, use `npm run build`, start `npm run simulator`, and run `npm run preview -- --host 127.0.0.1`; API requests are proxied to the local service.
-
-### Desktop
-
-The same `npm ci && npm run dev:stack` setup works on supported Node desktop systems. For a production PWA preview, build first and serve `dist/` with Vite preview while the local API is running. PWA installability requires localhost or HTTPS; static hosting must proxy `/api/*` to the simulator.
-
-The service worker caches the app shell and static resources. `/api/*` is network-only. A reservation intent may be saved in the device's IndexedDB outbox while offline; its status remains pending until the local API validates it after reconnection. Failed validation is shown as rejected. No reservation, credit debit, break, or dispatch is reported complete while queued.
+Open **map** in the application bar or **explore the compound** on Start. Click a building (or use the area buttons), inspect its clankers, and open a fleet profile. Use +/− to zoom and scroll to pan. Toggle clankers, illustrative paths or fault-only markers. Run the simulator to see charging and assignment zones update. This is a fictional schematic, not a site survey or navigation system.
