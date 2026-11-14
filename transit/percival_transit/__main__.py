@@ -6,7 +6,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from .core import SOURCE, board, import_feed, instant
-from .planner import round_trip, stations
+from .planner import round_trip, stations, explore
+from .connections import INTERCHANGES
 from .feeds import FEEDS, catalog, departures, feed_store
 
 
@@ -26,6 +27,21 @@ def response(path, store):
                 return (200 if result['status'] == 'Scheduled' else 503), result
             except (KeyError, ValueError) as exc:
                 return 400, {'error': str(exc)}
+    if url.path == '/v1/connections':
+        return 200, dict(api_version='v1', status='Unknown', interchanges=INTERCHANGES, reason='Walking-transfer evidence is incomplete; no complete connection is claimed.')
+    if url.path in ('/v1/explore', '/v1/intercity'):
+        query = parse_qs(url.query)
+        try:
+            feed = query.get('feed', ['pvta'])[0]
+            origin = query['origin'][0]
+            leave = instant(query['leave_after'][0])
+            back = instant(query['back_by'][0])
+            if url.path == '/v1/intercity':
+                return 503, dict(api_version='v1', status='Unknown', reason='Dated Amtrak schedule and walking links to intercity rail are not verified.', missing_links=['Amtrak dated schedule with usable terms', 'Origin bus to intercity rail walking paths', 'Complete final bus return to origin'], destination=query.get('destination', ['NYP'])[0], sources={f:catalog(store,f)['status'] for f in FEEDS})
+            result = explore(feed_store(store, feed), origin, leave, back, float(query.get('min_minutes', ['60'])[0]), query.get('sort', ['time_there'])[0])
+            return (200 if result['status'] == 'Scheduled' else 503), result
+        except (KeyError, ValueError) as exc:
+            return 400, {'error': str(exc)}
     if url.path == '/v1/health':
         return 200, {'api_version': 'v1', 'service': 'percival-transit', 'live': False}
     if url.path == '/v1/stations':
@@ -70,6 +86,13 @@ def main():
     bus.add_argument('stop_id')
     bus.add_argument('--direction-id')
     bus.add_argument('--at', type=instant)
+    exp = commands.add_parser('explore')
+    exp.add_argument('feed', choices=FEEDS)
+    exp.add_argument('origin')
+    exp.add_argument('--leave-after', type=instant, required=True)
+    exp.add_argument('--back-by', type=instant, required=True)
+    exp.add_argument('--min-minutes', type=float, default=60)
+    exp.add_argument('--sort', choices=['time_there','transfers','travel_time'], default='time_there')
     cat = commands.add_parser('catalog')
     cat.add_argument('feed', choices=FEEDS)
     dep = commands.add_parser('board')
@@ -102,6 +125,10 @@ def main():
         except Exception as exc:
             print(json.dumps({'status': 'Unknown', 'error': str(exc), 'current_snapshot_unchanged': True}))
             return 1
+    elif args.command == 'explore':
+        result = explore(feed_store(args.store, args.feed), args.origin, args.leave_after, args.back_by, args.min_minutes, args.sort)
+        print(json.dumps(result, indent=2))
+        return 0 if result['status'] == 'Scheduled' else 1
     elif args.command == 'catalog':
         print(json.dumps(catalog(args.store, args.feed), indent=2))
     elif args.command == 'departures':

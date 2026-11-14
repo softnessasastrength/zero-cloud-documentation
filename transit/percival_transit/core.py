@@ -205,6 +205,11 @@ def board(store, station, at=None, now=None, hours=24, max_age_days=7, route_id=
             raise ValueError('station identity absent from feed')
         result['source_stop_ids'] = sorted(ids)
         until = at + timedelta(hours=hours)
+        # This acquired version predates the published Nov 16 timetable change.
+        if digest == '03e8bc27defd6b3a501c760592ad0ed196b5b88db0a5380ba855e55c999f9d0d':
+            result['verified_coverage_end'] = '2026-11-15'
+            if until.astimezone(zone).date() > date(2026,11,15):
+                raise ValueError('Published Hartford Line timetable changes November 16; this snapshot has not been reconciled with that schedule.')
         if at.astimezone(zone).date() < start or until.astimezone(zone).date() > end:
             raise ValueError('query window outside feed coverage')
         first = at.astimezone(zone).date() - timedelta(days=2)
