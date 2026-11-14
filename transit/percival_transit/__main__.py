@@ -6,10 +6,26 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from .core import SOURCE, board, import_feed, instant
+from .planner import round_trip, stations
 
 
 def response(path, store):
     url = urlparse(path)
+    if url.path == '/v1/health':
+        return 200, {'api_version': 'v1', 'service': 'percival-transit', 'live': False}
+    if url.path == '/v1/stations':
+        return 200, stations(store)
+    if url.path == '/v1/round-trip':
+        query = parse_qs(url.query)
+        required = {'origin', 'destination', 'depart_after', 'arrive_by', 'return_after', 'return_by'}
+        try:
+            if not required <= set(query) or set(query) - required - {'margin_minutes'} or any(len(v) != 1 for v in query.values()):
+                raise ValueError('provide origin, destination and all four offset timestamps')
+            values = {k: instant(query[k][0]) for k in required - {'origin', 'destination'}}
+            result = round_trip(store, query['origin'][0], query['destination'][0], **values, margin_minutes=float(query.get('margin_minutes', ['10'])[0]))
+            return (503 if result['status'] == 'Unknown' else 200), result
+        except ValueError as exc:
+            return 400, {'error': str(exc)}
     parts = url.path.strip('/').split('/')
     if len(parts) != 4 or parts[:2] != ['v1', 'stations'] or parts[3] != 'departures':
         return 404, {'error': 'Use /v1/stations/{hartford|windsor-locks}/departures'}
@@ -36,6 +52,12 @@ def main():
     dep.add_argument('station', choices=['hartford', 'windsor-locks'])
     dep.add_argument('--at', type=instant)
     dep.add_argument('--hours', type=float, default=24)
+    plan = commands.add_parser('plan')
+    plan.add_argument('origin')
+    plan.add_argument('destination')
+    for name in ('depart-after', 'arrive-by', 'return-after', 'return-by'):
+        plan.add_argument('--' + name, type=instant, required=True)
+    plan.add_argument('--margin-minutes', type=float, default=10)
     api = commands.add_parser('serve')
     api.add_argument('--port', type=int, default=8765)
     args = parser.parse_args()
@@ -56,6 +78,10 @@ def main():
         except Exception as exc:
             print(json.dumps({'status': 'Unknown', 'error': str(exc), 'current_snapshot_unchanged': True}))
             return 1
+    elif args.command == 'plan':
+        result = round_trip(args.store, args.origin, args.destination, args.depart_after, args.arrive_by, args.return_after, args.return_by, args.margin_minutes)
+        print(json.dumps(result, indent=2))
+        return 0 if result['status'] == 'Scheduled' else 1
     elif args.command == 'board':
         result = board(args.store, args.station, at=args.at, hours=args.hours)
         print(json.dumps(result, indent=2))

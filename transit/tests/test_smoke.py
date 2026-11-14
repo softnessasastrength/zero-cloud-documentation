@@ -38,6 +38,15 @@ class SmokeTests(unittest.TestCase):
         self.assertEqual(len(report['sha256']), 64)
         self.assertNotIn('boards', report)
 
+    def test_nonfixture_download_is_parsed(self):
+        buffer = io.BytesIO()
+        build(buffer)
+        with patch('percival_transit.smoke.http_boards', side_effect=OSError('socket blocked')):
+            report = run(raw=buffer.getvalue())
+        self.assertFalse(report['fixture'])
+        self.assertIn('source_inventory', report)
+        self.assertEqual(report['error'], 'socket blocked')
+
     def test_http_failure_cannot_pass(self):
         with patch('percival_transit.smoke.http_boards', side_effect=OSError('socket blocked')):
             report = run(fixture=True)

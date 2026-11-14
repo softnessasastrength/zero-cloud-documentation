@@ -51,7 +51,6 @@ def run(fixture=False, raw=None):
     try:
         if raw is None:
             if fixture:
-                import io
                 from fixtures.make_demo import build
                 buffer = io.BytesIO()
                 build(buffer)
