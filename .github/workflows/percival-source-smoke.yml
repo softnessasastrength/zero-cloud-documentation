@@ -1,0 +1,30 @@
+name: Percival source smoke
+on:
+  push:
+    branches: [feat/percival-source-smoke]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Deterministic tests
+        run: python -m unittest discover -s tests -v
+        working-directory: transit
+      - name: Fixture HTTP smoke
+        run: python -m percival_transit.smoke --fixture --output fixture-smoke.json
+        working-directory: transit
+      - name: Authoritative Hartford Line smoke
+        run: python -m percival_transit.smoke --accept-source-terms --output source-smoke.json
+        working-directory: transit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: percival-smoke-reports
+          path: transit/*-smoke.json

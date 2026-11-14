@@ -72,7 +72,7 @@ def main():
                 self.end_headers()
                 self.wfile.write(raw)
         server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
-        print(f'Percival API: http://127.0.0.1:{args.port}', flush=True)
+        print(f'Percival API: http://127.0.0.1:{server.server_port}', flush=True)
         server.serve_forever()
     return 0
 
