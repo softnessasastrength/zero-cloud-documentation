@@ -1,7 +1,7 @@
 name: Percival source smoke
 on:
-  push:
-    branches: [feat/percival-source-smoke]
+  pull_request:
+    paths: ['transit/**', '.github/workflows/percival-source-smoke.yml']
   workflow_dispatch:
 permissions:
   contents: read

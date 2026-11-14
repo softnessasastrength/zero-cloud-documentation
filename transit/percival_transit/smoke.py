@@ -5,7 +5,9 @@ import json
 import subprocess
 import sys
 import tempfile
-import time
+import csv
+import io
+import zipfile
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -62,6 +64,10 @@ def run(fixture=False, raw=None):
         report['snapshot_date'] = now.isoformat()
         if len(raw) > 20_000_000:
             raise ValueError('archive exceeds 20 MB')
+        with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+            report['archive_files'] = archive.namelist()
+            report['source_inventory'] = {name: list(csv.DictReader(io.StringIO(archive.read(name).decode('utf-8-sig'))))
+                for name in ('stops.txt', 'agency.txt', 'routes.txt', 'feed_info.txt') if name in archive.namelist()}
         tables, stops, trips, zone, start, end = load(raw)
         report.update(agency_timezone=str(zone), coverage_start=str(start), coverage_end=str(end),
                       agencies=tables['agency'], routes=tables['routes'], trip_count=len(trips),
