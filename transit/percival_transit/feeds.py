@@ -73,10 +73,14 @@ def departures(root, feed, route_id, stop_id, direction_id=None, at=None):
         return status | dict(departures=[], station='stop:' + stop_id)
     if route_id not in {r['route_id'] for r in status['routes']}:
         return status | dict(status='Unknown', departures=[], reason='Route absent from this snapshot')
+    if not any(p['route_id'] == route_id and stop_id in p['stops'] and (direction_id is None or p['direction_id'] == direction_id) for p in status['patterns']):
+        return status | dict(status='Unknown', departures=[], reason='No source pattern serves this route, stop and direction combination')
     result = board(feed_store(root, feed), 'stop:' + stop_id, at=at, route_id=route_id, direction_id=direction_id, compiled=snapshot(str(feed_store(root, feed)), status['snapshot'])[1])
     # Downstream station names are sourced from this exact trip pattern, not headsign guesses.
     result.update(feed=feed, attribution=FEEDS[feed]['name'])
+    route = next(r for r in status['routes'] if r['route_id'] == route_id)
     for d in result['departures']:
+        d['route_label'] = route.get('route_short_name') or route.get('route_long_name') or route_id
         _, (tables, stops, trips, _, _, _) = snapshot(str(feed_store(root, feed)), d['snapshot'])
         rows = sorted((r for r in tables['stop_times'] if r['trip_id'] == d['source_trip_id']), key=lambda r: int(r['stop_sequence']))
         index = next(i for i, r in enumerate(rows) if r['stop_id'] == d['source_stop_id'])
