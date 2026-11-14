@@ -12,7 +12,7 @@ def run(feed):
     now = datetime.now(UTC)
     report = dict(feed=feed, source=FEEDS[feed]['url'], terms=FEEDS[feed]['terms'], checked_at=now.isoformat(), result='Unknown')
     try:
-        with urllib.request.urlopen(report['source'], timeout=45) as response:
+        with urllib.request.urlopen(urllib.request.Request(report['source'], headers={'User-Agent':'PercivalTransit/0.1 (+local scheduled transit preview)'}), timeout=45) as response:
             raw = response.read(20_000_001)
         if len(raw) > 20_000_000:
             raise ValueError('archive exceeds limit')
@@ -31,7 +31,7 @@ def run(feed):
                         r = departures(root, feed, rid, sid, direction, instant(d+'T04:00:00-05:00'))
                         samples.append(dict(date=d, route=route, stop_id=sid, direction_id=direction, board=r))
             report['samples'] = samples
-            pins = [s for s in info['stops'] if any(k in s['stop_name'].casefold() for k in ('bright meadow', 'jewish', 'massmutual', 'railroad station', 'rr station'))]
+            pins = [s for s in info['stops'] if any(k in s['stop_name'].casefold() for k in ('bright meadow', 'jewish', 'massmutual', 'railroad station', 'rr station', 'railroad', 'windsor locks'))]
             report['preferred_stop_candidates'] = pins
             report['pinned_samples'] = []
             for stop in pins:
@@ -52,5 +52,13 @@ if __name__ == '__main__':
     result = run(sys.argv[1])
     Path(sys.argv[1] + '-smoke.json').write_text(json.dumps(result, indent=2))
     # Full report is an artifact; logs retain compact evidence.
-    print(json.dumps({k: v for k, v in result.items() if k != 'catalog'}, indent=2))
+    summary = {k:v for k,v in result.items() if k not in ('catalog','samples','pinned_samples')}
+    if 'catalog' in result:
+        summary['routes'] = result['catalog']['routes']
+        summary['coverage'] = [result['catalog'].get('coverage_start'),result['catalog'].get('coverage_end')]
+        summary['patterns'] = result['catalog']['patterns']
+    for key in ('samples','pinned_samples'):
+        if key in result:
+            summary[key] = [{**s,'board':{**s['board'],'departures':s['board'].get('departures',[])[:3]},'total_departures':len(s['board'].get('departures',[]))} for s in result[key]]
+    print(json.dumps(summary, indent=2))
     sys.exit(0 if result['result'] == 'Passed' else 1)

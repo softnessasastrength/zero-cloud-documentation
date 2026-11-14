@@ -11,7 +11,7 @@ FEEDS = {
     'rail': dict(url=SOURCE, terms=TERMS, routes=None, name='Hartford Line'),
     'cttransit': dict(url='https://www.cttransit.com/sites/default/files/gtfs/googlect_transit.zip',
         terms=TERMS, routes=['80', '81', '82', '82/84', '83', '84', '905', '905W'], name='CTtransit'),
-    'pvta': dict(url='https://pvta.com/g_trans/google_transit.zip',
+    'pvta': dict(url='https://www.pvta.com/g_trans/google_transit.zip?t=202610281453440',
         terms='https://pvta.com/bus_service/real_time_data.php', routes=['G5', 'R10', 'R14'], name='PVTA'),
 }
 
