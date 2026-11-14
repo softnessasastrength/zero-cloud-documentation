@@ -117,7 +117,7 @@ def main():
             if args.file:
                 raw = Path(args.file).read_bytes()
             else:
-                with urllib.request.urlopen(FEEDS[args.feed]['url'], timeout=45) as stream:
+                with urllib.request.urlopen(urllib.request.Request(FEEDS[args.feed]['url'], headers={'User-Agent':'PercivalTransit/0.1 (+local scheduled transit preview)'}), timeout=45) as stream:
                     raw = stream.read(20_000_001)
             if len(raw) > 20_000_000:
                 raise ValueError('archive exceeds 20 MB')
