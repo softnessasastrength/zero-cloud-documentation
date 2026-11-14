@@ -1,0 +1,12 @@
+import { spawn } from 'node:child_process';
+import process from 'node:process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import assert from 'node:assert/strict';
+const {fetch,setTimeout,console}=globalThis;
+const cwd=process.cwd(),dataDir=await mkdtemp(join(tmpdir(),'zerocloud-api-')),port=4200+Math.floor(Math.random()*30000),url=`http://127.0.0.1:${port}`;
+let server;
+async function start(){server=spawn(process.execPath,['--import','tsx','./simulator/server.mjs'],{cwd,env:{...process.env,PORT:String(port),ZERO_CLOUD_DATA_DIR:dataDir},stdio:'ignore'});for(let i=0;i<50;i++){try{const r=await fetch(`${url}/api/health`);if(r.ok)return;}catch(error){void error;}await new Promise(resolve=>setTimeout(resolve,100));}throw new Error('Local API failed to start.');}
+async function stop(){if(!server||server.exitCode!==null)return;server.kill('SIGTERM');await new Promise(resolve=>server.once('exit',resolve));}
+try{await start();const health=await(await fetch(`${url}/api/health`)).json();assert.equal(health.simulation,'synthetic');const command={id:'smoke-reservation',recordedAt:'2026-11-14T13:00:00.000Z',type:'reserve-break',employeeId:'emp-mara',guestName:'Alex',tableId:'table-garden-04',clankerId:'clanker-percival',start:840,duration:60};const response=await fetch(`${url}/api/commands`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(command)});assert.equal(response.status,200);const committed=await response.json();assert.equal(committed.employees[0].credit_balance,8);assert.equal(committed.reservations.length,1);const replay=await(await fetch(`${url}/api/replay`)).json();assert.deepEqual(replay.state,committed);assert.equal(replay.state_hash.length,64);await stop();await start();const recovered=await(await fetch(`${url}/api/state`)).json();assert.deepEqual(recovered,committed);console.log(`API smoke passed: persisted reservation, 8 credits remaining, replay ${replay.state_hash.slice(0,12)}…`);}finally{await stop();await rm(dataDir,{recursive:true,force:true});}
