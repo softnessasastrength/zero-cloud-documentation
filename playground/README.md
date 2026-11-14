@@ -54,6 +54,16 @@ In one Termux session run `npm run simulator`. In a second run `npm run preview 
 
 ### Chromebook / Crostini
 
+Run the [Chromebook launcher](scripts/percival-chromebook.sh) in the Linux Terminal:
+
+```sh
+bash scripts/percival-chromebook.sh
+```
+
+The menu defaults to the production PWA. Open `http://localhost:4173/#/resort` in ChromeOS Chrome and use **Install page as app** in the Chrome menu. Keep the Linux Terminal running while you use the simulator. The menu also offers a development server and optional local Percival chat via Ollama.
+
+The launcher prepares pinned checkouts in `~/.local/share/percival-chromebook` and installs missing dependencies for the selected mode. The Metro simulator uses synthetic resort data.
+
 In the Linux container, install Node 22+ and Git, clone the repository, then run `cd zero-cloud-documentation/playground && npm ci && npm run dev:stack`. Open the Vite URL in ChromeOS. For an installable production preview, use `npm run build`, start `npm run simulator`, and run `npm run preview -- --host 127.0.0.1`; API requests are proxied to the local service.
 
 ### Desktop
