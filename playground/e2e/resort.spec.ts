@@ -10,7 +10,10 @@ test('employee booking updates credits, protected break and live mission control
  await expect(page.getByText('clanker · dispatch · accepted')).toBeVisible();
  await page.getByRole('link',{name:/mission control/}).click();
  await expect(page.getByRole('heading',{name:'mission control'})).toBeVisible();
- await expect(page.getByText('1/2',{exact:true})).toBeVisible();
+ // The reservation is for a future break; the table is booked, not occupied yet.
+ const state=await (await request.get(`${api}/api/state`)).json();
+ expect(state.reservations).toHaveLength(1);
+ await expect(page.getByText('0/2',{exact:true})).toBeVisible();
  await expect(page.getByText('1 assigned · 2 in simulated fleet')).toBeVisible();
 });
 test('engineering scenario selector and guarded actuator fault work on phone viewport',async({page,request})=>{

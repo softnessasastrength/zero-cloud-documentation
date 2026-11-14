@@ -1,0 +1,45 @@
+import { test, expect } from '@playwright/test';
+test('Metro has both rail boards, preferred bus origins and exact-stop picker', async ({page})=>{
+ await page.goto('/#/transit');
+ await page.getByLabel('Query date/time (blank = now)').fill('2026-11-14T05:00:00-05:00');
+ await page.getByRole('button',{name:'Check departures'}).click();
+ const hartford=page.getByRole('region',{name:'Hartford Union Station',exact:true});
+ const windsor=page.getByRole('region',{name:'Windsor Locks',exact:true});
+ await expect(hartford.getByText('DEMO DATA — FICTIONAL SERVICE')).toBeVisible();
+ await expect(windsor.getByText('DEMO DATA — FICTIONAL SERVICE')).toBeVisible();
+ await expect(hartford.getByText(/Service date 2026-11-14/).first()).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Bright Meadow & Jewish Home'})).toBeVisible();
+ await page.getByLabel('Agency',{exact:true}).selectOption('pvta');
+ await page.getByLabel('Route',{exact:true}).selectOption('G5');
+ await page.getByLabel('Direction / branch').selectOption('0');
+ await page.getByLabel('Boarding stop').selectOption('10006');
+ await expect(page.getByRole('heading',{name:'G5 · MassMutual Enfield'})).toBeVisible();
+});
+test('Explore checks the whole return and names incomplete intercity links', async ({page})=>{
+ await page.goto('/#/transit');
+ await page.getByLabel('Can leave after').fill('2026-11-14T06:00:00-05:00');
+ await page.getByLabel('Need to be back by').fill('2026-11-14T18:00:00-05:00');
+ await page.getByRole('button',{name:'Find outings'}).click();
+ await expect(page.getByText(/Last usable departure:/).first()).toBeVisible({timeout:30000});
+ await page.getByRole('button',{name:'Get me to BOS'}).click();
+ await page.getByRole('button',{name:'Check BOS round trip'}).click();
+ await expect(page.getByText(/Missing link: Amtrak dated schedule/)).toBeVisible();
+});
+test('production service worker preserves cached boards but never invents new offline queries', async ({page,context})=>{
+ await page.goto('/#/transit');
+ await page.getByLabel('Query date/time (blank = now)').fill('2026-11-14T12:00:00Z');
+ await page.getByRole('button',{name:'Check departures'}).click();
+ const board=page.getByRole('region',{name:'Hartford Union Station',exact:true});
+ await expect(board.getByText(/DEMO DATA/)).toBeVisible();
+ await page.evaluate(()=>navigator.serviceWorker.ready);
+ await page.reload();
+ await expect(board.getByText(/DEMO DATA/)).toBeVisible();
+ await context.setOffline(true);
+ await page.getByRole('button',{name:'Check departures'}).click();
+ await expect(board.getByText('CACHED ·')).toBeVisible();
+ await page.getByLabel('Query date/time (blank = now)').fill('2026-11-20T12:00:00Z');
+ await page.getByRole('button',{name:'Check departures'}).click();
+ await expect(board.getByText('Unknown',{exact:true})).toBeVisible();
+ await expect(board.getByText(/no cached result matches this query/)).toBeVisible();
+ await context.setOffline(false);
+});

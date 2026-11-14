@@ -1,0 +1,28 @@
+import { TransitExplore } from './TransitExplore';
+import { useEffect, useState } from 'react';
+import { BoardPanel } from './Transit';
+import { getTransitBoard, type Board } from '../domain/transit-api';
+type Stop = {stop_id:string;stop_name:string};
+type Route = {route_id:string;route_short_name:string;route_long_name:string};
+type Pattern = {route_id:string;direction_id:string;headsign:string;stops:string[];destination:string};
+type Catalog = {status:string;reason:string;routes:Route[];stops:Stop[];patterns:Pattern[];snapshot_date?:string;fixture?:boolean};
+function StopBoard({feed,route,stop,direction,at,refresh,title}:{feed:string;route:string;stop:string;direction?:string;at:string;refresh:number;title:string}) {
+ const [board,setBoard]=useState<Board>();
+ useEffect(()=>{let active=true;const query=new URLSearchParams({route_id:route,stop_id:stop});if(direction!==undefined)query.set('direction_id',direction);if(at)query.set('at',at);void getTransitBoard(`/transit-api/v1/feeds/${feed}/departures?${query}`,`${feed}:${stop}`,at).then(b=>{if(active)setBoard(b);});return()=>{active=false;};},[feed,route,stop,direction,at,refresh]);
+ return <BoardPanel board={board} title={title}/>;
+}
+export function BusTransit({at,refresh}:{at:string;refresh:number}) {
+ const [feed,setFeed]=useState('cttransit');const [catalogs,setCatalogs]=useState<Record<string,Catalog>>({});const [route,setRoute]=useState('');const [direction,setDirection]=useState('');const [stop,setStop]=useState('');
+ useEffect(()=>{let active=true;for(const id of ['cttransit','pvta'])void fetch(`/transit-api/v1/feeds/${id}/catalog`,{signal:AbortSignal.timeout(8000),cache:'no-store'}).then(r=>r.json()).then((c:Catalog)=>{if(!Array.isArray(c.routes)||!Array.isArray(c.stops)||!Array.isArray(c.patterns))throw Error('Invalid catalog');if(c.status==='Scheduled')try{localStorage.setItem('percival-catalog:'+id,JSON.stringify(c));}catch{/* optional cache */}if(active)setCatalogs(v=>({...v,[id]:c}));}).catch(()=>{let cached:Catalog|undefined;try{cached=JSON.parse(localStorage.getItem('percival-catalog:'+id)||'null') as Catalog;}catch{/* missing catalog */}if(active)setCatalogs(v=>({...v,[id]:cached?{...cached,status:'Unknown',reason:'Cached route/stop catalog. New schedule queries require the local service.'}:{status:'Unknown',reason:'Start the local Transit service to load routes and stops.',routes:[],stops:[],patterns:[]}}));});return()=>{active=false;};},[refresh]);
+ const cat=catalogs[feed];const patterns=cat?.patterns.filter(p=>p.route_id===route)??[];const directions=[...new Set(patterns.map(p=>p.direction_id))];const stopIds=new Set(patterns.filter(p=>p.direction_id===direction).flatMap(p=>p.stops));
+ const pins=[
+  {feed:'pvta',route:{route_id:'G5',route_short_name:'G5'},stop:{stop_id:'10006',stop_name:'Bright Meadow · MassMutual Enfield'}},
+  {feed:'cttransit',route:{route_id:'16545',route_short_name:'905 / 905W branches'},stop:{stop_id:'7919',stop_name:'Bright Meadow Blvd @ Mass Mutual'}},
+  {feed:'pvta',route:{route_id:'G5',route_short_name:'G5'},stop:{stop_id:'1862',stop_name:'Jewish Home · source: Jewish House'}}
+ ];
+ return <><section aria-label="Preferred starting stops"><h2>Bright Meadow &amp; Jewish Home</h2><p>Preferred origins · exact source stop IDs. PVTA data provided by PVTA; no affiliation or endorsement.</p><div className="transit-boards">{pins.map(p=><StopBoard key={`${p.feed}:${p.route.route_id}:${p.stop.stop_id}`} feed={p.feed} route={p.route.route_id} stop={p.stop.stop_id} at={at} refresh={refresh} title={`${p.feed==='pvta'?'PVTA':'CTtransit'} ${p.route.route_short_name} · ${p.stop.stop_name}`}/>)}{!pins.length&&<p>Unknown — preferred stop identities have not been loaded from valid feeds.</p>}</div><p>Transfers at Bright Meadow and Windsor Locks: Unknown until exact walking paths and minimum walking times are verified. Nearby names do not establish a connection.</p></section>
+ <section className="metro-panel"><h2>Local bus departures</h2><div className="form-grid"><label>Agency<select aria-label="Agency" value={feed} onChange={e=>{setFeed(e.target.value);setRoute('');setStop('');setDirection('');}}><option value="cttransit">CTtransit</option><option value="pvta">PVTA</option></select></label><label>Route<select aria-label="Route" value={route} onChange={e=>{setRoute(e.target.value);setStop('');setDirection('');}}><option value="">Choose route</option>{cat?.routes.map(r=><option key={r.route_id} value={r.route_id}>{r.route_short_name} {r.route_long_name}</option>)}</select></label><label>Direction / branch<select aria-label="Direction / branch" value={direction} onChange={e=>{setDirection(e.target.value);setStop('');}}><option value="">Choose direction</option>{directions.map(d=><option value={d} key={d}>{d || 'Not supplied'} · {[...new Set(patterns.filter(p=>p.direction_id===d).map(p=>p.headsign||p.destination))].join(' / ')}</option>)}</select></label><label>Boarding stop<select aria-label="Boarding stop" value={stop} onChange={e=>setStop(e.target.value)}><option value="">Choose stop</option>{cat?.stops.filter(s=>stopIds.has(s.stop_id)).map(s=><option key={s.stop_id} value={s.stop_id}>{s.stop_name} [{s.stop_id}]</option>)}</select></label></div><p>{cat?.status??'Checking…'} · {cat?.reason}</p>{route&&stop&&<StopBoard feed={feed} route={route} stop={stop} direction={direction} at={at} refresh={refresh} title={`${route} · ${cat?.stops.find(s=>s.stop_id===stop)?.stop_name}`}/>}</section>
+ <TransitExplore/></>;
+}
+
+export function WindsorBus({at,refresh}:{at:string;refresh:number}){return <StopBoard feed="cttransit" route="16545" stop="13577" at={at} refresh={refresh} title="CTtransit 905 · Windsor Locks RR Stn @ 229 Main St"/>;}

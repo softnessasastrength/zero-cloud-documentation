@@ -21,3 +21,7 @@ See the upcoming architecture draft PR for subsystem specifications, event contr
 ## Scope
 
 All personas, schedules, operational metrics, and example scenarios are illustrative unless expressly marked as measured or implemented.
+
+## Percival Transit preview
+
+See [the Chromebook Transit preview](transit/PREVIEW.md) for the isolated launcher, official-source verification, exact commands and current limits. The existing ZeroCloud resort simulator remains available.
