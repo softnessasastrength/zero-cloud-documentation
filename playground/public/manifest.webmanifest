@@ -1,0 +1,14 @@
+{
+  "id": "/",
+  "name": "ZeroCloud Metro Simulator",
+  "short_name": "ZeroCloud",
+  "description": "An installable Windows Phone-inspired interface for a fictional resort simulator.",
+  "start_url": "/#/resort",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101112",
+  "theme_color": "#101112",
+  "categories": ["productivity", "utilities"],
+  "icons": [{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

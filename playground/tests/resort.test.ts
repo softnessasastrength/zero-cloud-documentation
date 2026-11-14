@@ -18,6 +18,13 @@ describe('event-sourced resort simulator',()=>{
  it('is idempotent by command id and replay has the same state hash input',()=>{
   const cmds=[at('book-1','reserve-break',{employeeId:'emp-mara',guestName:'Alex',tableId:'table-garden-04',clankerId:'clanker-percival',start:840,duration:60}),at('advance-1','advance',{minutes:60})];
   const once=replayResort(42,cmds), duplicate=applyResortCommand(once,cmds[1]);expect(duplicate).toEqual(once);expect(replayResort(42,cmds)).toEqual(once);
-  expect(once.employees[0].status).toBe('on-break');expect(once.events.at(-2)?.event_type).toBe('workforce.break.started');
+  expect(once.employees[0].status).toBe('on-break');expect(once.events.some(e=>e.event_type==='workforce.break.started')).toBe(true);expect(once.clankers[0].assignment_started).toBe(true);
+  const complete=applyResortCommand(once,at('advance-2','advance',{minutes:60}));expect(complete.employees[0].status).toBe('on-duty');expect(complete.clankers[0].status).toBe('available');expect(complete.clankers[0].battery).toBe(80);
+ });
+ it('records clock speed and rejects unsafe or unauthorized fault injection',()=>{
+  const speed=applyResortCommand(initialResortState(),at('speed-1','set-speed',{speed:15}));expect(speed.speed).toBe(15);
+  expect(()=>applyResortCommand(speed,at('fault-1','fault',{clankerId:'clanker-percival',operation:'inject',actorRole:'guest'}))).toThrow();
+  const faulted=applyResortCommand(speed,at('fault-2','fault',{clankerId:'clanker-percival',operation:'inject',actorRole:'engineer'}));expect(faulted.clankers[0].status).toBe('fault');
+  expect(()=>applyResortCommand(faulted,at('book-1','reserve-break',{employeeId:'emp-mara',guestName:'Alex',tableId:'table-garden-04',clankerId:'clanker-percival',start:840,duration:60}))).toThrow(/No eligible clanker/);
  });
 });
