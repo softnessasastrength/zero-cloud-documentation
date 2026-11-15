@@ -182,3 +182,35 @@
 .fleet-control-row>div{flex:1;min-width:0}
 .fleet-control-row button{flex:none}
 .engineer-toggle{font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:4px 7px;border:1px solid var(--line);color:var(--muted);text-align:right}
+
+/* ============================================================
+   Resort (ZeroCloud Metro) — responsive pass · chunk Z-06
+   The resort grids and heroes at the stylesheet's existing
+   breakpoints (1000px and 650px), following the app's own
+   recipes. The scenario grid has the estate compound
+   layout's shape — a main panel beside a 310px side panel —
+   and collapses to one column with it at 1000px; until now
+   its stacked side panel stayed 310px wide at phone widths.
+   The two-panel grids follow the two-column recipe and the
+   heroes follow the estate banner (block layout, 25px
+   padding, 34px headline, the clock stepped below the text
+   with the estate time's 30px margin) at 650px. The blocks
+   sit here, after the Z-01…Z-05 base rules, because the
+   sheet's original media queries precede those rules and at
+   equal specificity only source order lets a breakpoint
+   rule win — the estate map section places its own media
+   queries the same way. No resort animations are added;
+   reduced motion stays governed by the global rule above.
+   ============================================================ */
+@media(max-width:1000px){
+.metro-scenario-grid{flex-direction:column}
+.metro-scenario-grid>.booking-panel,.metro-scenario-grid>.entitlement-panel{flex:none}
+}
+@media(max-width:650px){
+.mission-grid,.engineering-grid{flex-direction:column}
+.mission-grid>.metro-panel,.engineering-grid>.metro-panel{flex:none}
+.resort-welcome,.mc-hero,.engineering-banner{display:block;padding:25px}
+.resort-welcome h2,.mc-hero h2,.engineering-banner h2{font-size:34px}
+.welcome-clock,.mc-clock{margin-top:30px}
+.engineering-banner>svg{display:block;margin-top:30px}
+}
