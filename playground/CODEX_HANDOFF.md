@@ -191,3 +191,87 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   when a user assigns one in the editor. The doc
   sentence that overclaims this wiring is Z-10's to
   fix.
+
+### Z-09 — Resort tiles in the default Start layout · 2026-11-15 · Ember (Muse) · branch `metro-z09_muse`
+
+- **Base:** `metro-z08_muse` (PR #33; this PR targets
+  it and lands after it). The card declares "Depends
+  on: Z-08", and the dependency is real in the code:
+  the seeded tiles bind the `resort-reservations` /
+  `resort-clankers` metrics Z-08 added to the tile
+  enum and resolves in `Start.tsx`; a default layout
+  naming them cannot exist on any earlier tree. All
+  62 tracked playground files were verified
+  byte-identical to the `metro-z08_muse` tree by git
+  blob SHA-1 before editing (100 tracked blobs
+  repo-wide, 0 mismatches).
+- **Before this chunk:** the seeded default tile set
+  (`initialTiles` in `src/domain/seed.ts`) held 15
+  household / hospitality / infrastructure tiles and
+  no resort tile; a resort tile existed only when a
+  user assigned one in the editor (Z-08).
+- **Seeded:** the `modules` table in `seed.ts` gains
+  two entries, appended after the existing 15 (which
+  keep their ids, order, and every field):
+  `Reservations` (id `reservations`, label
+  `ZeroReservations`, metric `resort-reservations`)
+  and `ResortFleet` (id `resortfleet`, label
+  `ZeroResortFleet`, metric `resort-clankers`), both
+  group `Resort`, both routing to `/resort`, size
+  `medium`, colours from the existing palette
+  (`#a36a16`, `#6845b8`). The `Resort` group renders
+  after Infrastructure on a fresh Start page.
+- **Fresh vs saved (the chunk's guarantee):** no
+  store change was needed and none was made. The
+  persist middleware (zustand, `src/state/store.ts`)
+  distinguishes the two states by construction: with
+  no stored `workspace` record, the store is created
+  with `tiles: initialTiles`, so fresh state gets the
+  new seed; with a stored record, rehydration
+  replaces `tiles` wholesale with the saved array —
+  there is no merge, migration, or injection path
+  anywhere in the store. The card's stop condition
+  (the store cannot distinguish fresh state from a
+  saved layout) does not arise.
+- **Suites (baseline on unmodified `metro-z08_muse`
+  reproduced first — typecheck PASS, lint PASS,
+  Vitest 17/17, build PASS, e2e 6/6):** `npm run
+  typecheck` PASS; `npm run lint` PASS; `npm test`
+  PASS — 19 tests, 5 files (17 baseline + 2 new in
+  `tests/ui.test.tsx`: fresh state — the seed's id
+  list is pinned (the 15 existing ids plus
+  `reservations` and `resortfleet`), the `Resort`
+  group renders, and a stubbed snapshot (per Z-08)
+  drives the seeded tiles to `2reservations held` /
+  `1resort clankers available`, both linking to
+  `#/resort`; saved layout — a pre-existing
+  `workspace` record holding a two-tile layout with
+  no resort tiles is written to the store's own
+  storage and rehydrated through the real persist
+  path, and the loaded `tiles` are byte-identical
+  (`JSON.stringify` equality) to what was saved,
+  with no resort tile injected). The existing tests
+  pass unmodified. `npm run build` PASS.
+  `npm run test:e2e` PASS — 6/6 (desktop + Pixel 7).
+  A throwaway browser probe (deleted after the run)
+  opened Start on a fresh browser profile against
+  the seeded simulator: the `Resort` group shows `0`
+  reservations held and `2` resort clankers
+  available — the seed-20261114 state, derived
+  live — both tiles linking to `#/resort`.
+- **Residual limits:** e2e and the probe ran against
+  the full Chromium build already in the local
+  browser cache (chromium-1255) via a temporary
+  config that only overrode
+  `launchOptions.executablePath`; the temporary
+  config and probe were deleted after their runs and
+  no repo file carries them — no device result is
+  claimed. One nuance, recorded not absorbed: the
+  card's "a stored layout must load exactly as
+  saved" is proven here for the persisted `tiles`
+  array — the Start layout the store owns; named
+  layouts saved via `saveLayout` ride the same
+  verbatim round-trip (`structuredClone` in,
+  `structuredClone` out) and were not separately
+  re-proven. The doc reconciliation of the default
+  layout's claims remains Z-10's.
