@@ -214,3 +214,38 @@
 .welcome-clock,.mc-clock{margin-top:30px}
 .engineering-banner>svg{display:block;margin-top:30px}
 }
+
+/* ============================================================
+   Resort (ZeroCloud Metro) — light-theme parity · chunk Z-07
+   The [data-theme=light] counterparts for the Z-01…Z-06
+   sections above. Every hard-coded colour in those sections
+   was audited: a colour that sits on a theme-flipping ground
+   (the page, var(--surface) panels) gets a counterpart here,
+   using the sheet's own light values — #56676a, the light
+   value of the kickers' #aab6b7 on .eyebrow; #91472e, the
+   error family's dark member; #2c665b and #32694f, the dark
+   members of the mint and green pairs; var(--accent) for the
+   pale-teal #72bfc1 accents. The heroes take the estate
+   banner's light recipe whole: the gradient is a both-theme
+   dark panel, so only the inherited text colour is forced
+   to #fff. Colours that need no counterpart, by design: the
+   hero gradient stops and #40c5c6 border (the estate heroes
+   keep theirs under light), the hero paragraph #a8c7c5, the
+   clock glyphs #81d7d2 and the mc-clock label #aab6b7 (all
+   sit on the gradient, dark in both themes), #fff on
+   var(--accent) grounds (mode-switch, employee-avatar — the
+   .primary pairing), the confirm-icon chip (its #7be4b1 sits
+   on its own #32694f in both themes), the border-only dark
+   members #2c665b/#32694f, the fault/warning accents #e76c47
+   and #ddae50, and the outbox tint #5e461c30 (an alpha wash
+   copied from .warning, which the sheet leaves unmodified
+   under light). No token was added and no base rule changed.
+   ============================================================ */
+[data-theme=light] .resort-welcome,[data-theme=light] .mc-hero,[data-theme=light] .engineering-banner{color:#fff}
+[data-theme=light] .panel-kicker,[data-theme=light] .map-room>span{color:#56676a}
+[data-theme=light] .metro-message.error{color:#91472e}
+[data-theme=light] .event-quality,[data-theme=light] .credit-symbol,[data-theme=light] .credit-pill,[data-theme=light] .metric-icon{color:#2c665b}
+[data-theme=light] .route-two{border-top-color:#2c665b}
+[data-theme=light] .protected-banner{color:#32694f}
+[data-theme=light] .metro-event time,[data-theme=light] .guest-privacy-card svg,[data-theme=light] .coverage-note svg,[data-theme=light] .map-table svg,[data-theme=light] .map-node svg{color:var(--accent)}
+[data-theme=light] .map-room{background:var(--surface)}
