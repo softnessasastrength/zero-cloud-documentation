@@ -18,7 +18,7 @@ test('engineering scenario selector and guarded actuator fault work on phone vie
  await page.getByRole('button',{name:'settings'}).click();await page.getByLabel('Simulated role').selectOption('engineer');await page.getByRole('button',{name:'settings'}).click();
  await page.getByLabel('Choose deterministic resort fixture').selectOption('20261116');
  await expect(page.getByText('Percival begins faulted; route coverage to Cogsworth.')).toBeVisible();
- await expect(page.getByRole('button',{name:'verify repair'})).toBeVisible();await page.getByRole('button',{name:'verify repair'}).click();await expect(page.getByRole('button',{name:'inject fault'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'verify repair'})).toBeVisible();await page.getByRole('button',{name:'verify repair'}).click();await expect(page.locator('.fleet-control-row').filter({hasText:'Percival'}).getByRole('button',{name:'inject fault'})).toBeVisible();
  await page.goto('/#/resort');await expect(page.getByLabel('Service coverage')).toContainText('Percival · 92% battery');
  await expect(page.getByText('local simulation connected')).toBeVisible();
 });
