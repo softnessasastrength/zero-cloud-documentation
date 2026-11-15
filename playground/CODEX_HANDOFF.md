@@ -108,3 +108,42 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   (20261114/15/16), versioned commands, JSONL journal, replay hash verified
   identical across runs in this pass; UI screens were unrouted until fix 2
   and are unstyled until scoped item 1.
+
+---
+
+## Chunk log (CODEX_CHUNKS.md)
+
+### Z-01 — Shared resort primitives · 2026-11-15 · Ember (Muse) · branch `metro-z01_muse`
+
+- **Styled:** appended one delimited section ("Resort (ZeroCloud Metro) —
+  shared primitives · chunk Z-01") at the end of `playground/src/styles.css`;
+  no existing line was modified. It gives rules to the 18 classes the three
+  resort screens share — `metro-panel`, `panel-kicker`, `panel-copy`,
+  `metro-loading`, `metro-message`, `metro-control`, `metro-primary`,
+  `metro-section`, `section-heading`, `data-tag`, `mode-switch`,
+  `outbox-notice`, `outbox-entry`, `quiet-link`, `control-row`,
+  `metro-events`, `metro-event`, `event-quality` — plus the two named
+  variants `.metro-message.error` and `.mode-switch button.selected`.
+  Only the existing `:root` tokens (`--surface`, `--line`, `--muted`,
+  `--accent`) and the sheet's established type styles and colour vocabulary
+  (`eyebrow`, `status`, `warning`, `event-row`, `simulation-badge`) were
+  used; no new tokens, no component edits, no class renames.
+- **Coverage check** (grep count of rule occurrences per class in
+  `src/styles.css`, all ≥ 1): metro-panel 1, panel-kicker 1, panel-copy 1,
+  metro-loading 1, metro-message 2, metro-control 1, metro-primary 1,
+  metro-section 1, section-heading 2, data-tag 1, mode-switch 3,
+  outbox-notice 1, outbox-entry 2, quiet-link 1, control-row 1,
+  metro-events 1, metro-event 2, event-quality 1; variants
+  `.metro-message.error` and `.mode-switch button.selected` both present.
+- **Suites (Node v24.22.1 sandbox):** `npm run typecheck` PASS;
+  `npm run lint` PASS; `npm test` PASS — 14 tests, 5 files;
+  `npm run build` PASS; `npm run test:e2e` PASS — 6/6 (desktop + Pixel 7
+  projects; the resort spec exercises all three routes).
+- **Residual limits:** e2e ran against the full Chromium build already in
+  the local browser cache (chromium-1255) via a temporary config that only
+  overrode `launchOptions.executablePath`; the temporary config was deleted
+  after the run and no repo file carries it — the stock headless-shell
+  artifact is not downloadable in this sandbox (same caveat as the
+  2026-11-14 pass), and no device result is claimed. Responsive stacking
+  of the resort grids remains Z-06 and light-theme parity for the resort
+  section remains Z-07; screen-specific classes remain Z-02/Z-04/Z-05.
