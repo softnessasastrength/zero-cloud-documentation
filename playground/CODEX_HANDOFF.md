@@ -594,3 +594,108 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   remains Z-07. Observed, not acted on (named in no chunk
   card): `map-dot`, `api-status`, `presence` and
   `replay-result` still have no rules anywhere in the sheet.
+
+### Z-07 — Light-theme parity for resort classes · 2026-11-15 · Ember (Muse) · branch `metro-z07_muse`
+
+- **Base:** stacked on `metro-z06_muse` (PR #31, open and
+  unmerged) — the card declares "Depends on: Z-06", and the
+  counterparts belong at the tail of the same build-out
+  series, after all six Z-sections. This branch's PR targets
+  `metro-z06_muse` so its diff is exactly the Z-07 change;
+  it retargets to `main` once PR #31 lands (and #31 once #30
+  lands, and #30 once #29 lands, and #29 once #28 lands, and
+  #28 once #27 lands, and #27 once #26 lands). All 62 tracked
+  playground files were verified byte-identical to the base
+  tree by git blob SHA-1 before editing.
+- **Parity audit:** every hard-coded colour in the Z-01…Z-06
+  sections was listed before editing — 18 distinct colours
+  across 46 declarations. Fifteen declarations sit on a
+  theme-flipping ground (the page, or a `var(--surface)`
+  panel) in a colour chosen for dark grounds; they get
+  counterparts. The rest are both-theme by design and are
+  named in the section header: the hero gradient and its
+  `#40c5c6` border (the estate heroes keep theirs under
+  light), the colours that sit on that gradient (paragraph
+  `#a8c7c5`, clock glyphs `#81d7d2`, the mc-clock label
+  `#aab6b7` — the ground is dark in both themes), `#fff` on
+  `var(--accent)` grounds (the `.primary` pairing), the
+  confirm-icon chip (its `#7be4b1` sits on its own `#32694f`
+  in both themes), the border-only dark members `#2c665b`
+  and `#32694f`, the fault/warning accents `#e76c47` and
+  `#ddae50`, and the outbox tint `#5e461c30` (an alpha wash
+  copied from `.warning`, which the sheet leaves unmodified
+  under light).
+- **Styled:** appended one delimited section ("Resort
+  (ZeroCloud Metro) — light-theme parity · chunk Z-07") at
+  the tail of `playground/src/styles.css`; no existing line
+  was modified (the base file is a byte-exact prefix of the
+  result). Eight counterpart rules, every value taken from
+  the sheet's own palette: the three heroes take the estate
+  banner's light recipe (`color:#fff` — the gradient stays,
+  the inherited text is forced light, as on `.estate-banner`);
+  `.panel-kicker` and `.map-room>span` take `#56676a`, the
+  app's own light value for their `#aab6b7` (`.eyebrow`,
+  `.field>span`); `.metro-message.error` takes `#91472e`,
+  the error family's dark member from `.status.failed`; the
+  mint text colours (`.event-quality`, `.credit-symbol`,
+  `.credit-pill`, `.metric-icon`) and the dashed route band
+  (`.route-two`) take `#2c665b`, the dark member of their
+  own pair (`.simulation-badge`); `.protected-banner` takes
+  `#32694f`, its own border's green; the pale-teal accents
+  (`.metro-event time`, the privacy/coverage/map glyphs)
+  take `var(--accent)`, the theme's dark teal; and
+  `.map-room` — the `#101112` ground the Z-03 entry named a
+  dark-theme literal — takes `var(--surface)`, so the room
+  blocks step from the page in light exactly as the map
+  nodes already do. No token was added, no component was
+  touched, and the out-of-scope classes (`map-dot`,
+  `api-status`, `presence`, `replay-result`) stay out — the
+  card names none of them.
+- **Coverage check** (the card's parity check, run as a
+  script over the sheet): of the 46 hard-coded colour
+  declarations in the Z-01…Z-06 sections, 15 are covered by
+  a `[data-theme=light]` counterpart for the same selector
+  and property family, 31 are the documented both-theme set
+  above, and none is left over; every selector named in the
+  new section exists in the base resort sections (no dead
+  rules). Declarations written with theme variables were
+  never in question.
+- **Suites (Node v24.22.1 sandbox; baseline on the Z-06
+  base reproduced first — identical results):**
+  `npm run typecheck` PASS; `npm run lint` PASS;
+  `npm test` PASS — 14 tests, 5 files; `npm run build`
+  PASS; `npm run test:e2e` PASS — 6/6 (desktop + Pixel 7).
+- **Render check** (throwaway Playwright probe against the
+  dev server + simulator, deleted after the run; both
+  themes, all three routes, 1280×800 and 412×915): under
+  `data-theme="light"` at desktop the three heroes and their
+  headlines compute to white text on the retained gradient,
+  `.panel-kicker` and the map-room labels compute to
+  `#56676a`, `.metric-icon` to `#2c665b`, the map rooms to
+  the light `--surface`, and the booking flow completes
+  with the confirm chip unchanged; under dark every probed
+  value is the base's exactly (heroes `#f6f5f2`, kicker
+  `#aab6b7`, metric icon `#63d7bd`, map rooms `#101112`).
+  `documentElement.scrollWidth` equals the viewport width
+  at both widths on all three routes in both themes, and
+  the grid panel pairs (scenario, mission, engineering) do
+  not overlap at either width. One process note: the first
+  probe run measured during the app's `.3s` `enter`
+  animation and reported 3–12px scrollWidth excesses in
+  *both* themes — the load transient the Z-02 entry already
+  names; the probe was fixed to wait the animation out, and
+  no code changed for it.
+- **Residual limits:** e2e and the render probe ran against
+  the full Chromium build already in the local browser
+  cache (chromium-1255) via a temporary config that only
+  overrode `launchOptions.executablePath`; the temporary
+  config and probe were deleted after the run and no repo
+  file carries them — the stock headless-shell artifact is
+  not downloadable in this sandbox (same caveat as
+  Z-01–Z-06), and no device result is claimed. The resort
+  stylesheet build-out is now complete (Z-01–Z-07); the
+  remaining chunks are the Start-tile pair (Z-08, Z-09) and
+  the documentation reconciliation (Z-10). Observed, not
+  acted on (named in no chunk card): `map-dot`, `api-status`,
+  `presence` and `replay-result` still have no rules anywhere
+  in the sheet — under either theme.
