@@ -214,3 +214,90 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   Z-07. Observed, not acted on (named in no chunk card): `api-status`,
   `presence` and `map-dot` are used by these screens but have no rules
   anywhere in the sheet.
+
+### Z-03 — Resort facility map · 2026-11-15 · Ember (Muse) · branch `metro-z03_muse`
+
+- **Base:** stacked on `metro-z02_muse` (PR #27, open and unmerged) —
+  the card declares "Depends on: Z-01" only, and its class set is
+  disjoint from Z-02's, but the chunk appends its section directly
+  after Z-02's in the same stylesheet build-out series, and the map
+  renders inside a screen whose primitives (Z-01) and layout (Z-02)
+  precede it. This branch's PR targets `metro-z02_muse` so its diff
+  is exactly the Z-03 change; it retargets to `main` once PR #27
+  lands (and #27 once #26 lands). All 62 tracked playground files
+  were verified byte-identical to the base tree by git blob SHA-1
+  before editing.
+- **Styled:** appended one delimited section ("Resort (ZeroCloud
+  Metro) — facility map · chunk Z-03") after the Z-02 section in
+  `playground/src/styles.css`; no existing line was modified. It
+  gives rules to the 12 classes the card names — `resort-map`,
+  `dining-room`, `service-room`, `map-table`, `map-room`,
+  `map-node`, `node-lobby`, `map-route`, `route-one`, `route-two`,
+  `map-unit`, `map-caption`. The map renders in the Mission Control
+  facility panel ("FACILITY MAP / LEVEL 01", the `ResortMetro.tsx`
+  module's second screen); `map-caption` is also reused under that
+  screen's events list, where the same footnote rule applies. Only
+  the existing `:root` tokens and the sheet's established patterns
+  were used: the plan is a two-column grid of room blocks on the
+  panel (rooms recessed in the sheet's `#101112` ground with the
+  `data-widget` border-top device — `--accent` for the dining
+  room, the `simulation-badge` green `#2c665b` for the service
+  room), the two routes are full-width bands passing behind the
+  rooms (route one a solid `--accent` bar, route two a dashed
+  `#63d7bd` line), `map-table` is a bordered chip in the
+  `credit-quote` shape, `map-unit` rows follow the
+  `employee-card`/`metro-event` row pattern with the status pushed
+  right, the lobby node is a centred chip spanning the plan's foot
+  with an `--accent` border, and `map-caption` is 12px
+  `var(--muted)` footnote text. No new tokens, no component edits,
+  no class renames.
+- **Coverage check** (every class ≥ 1 rule in `src/styles.css`,
+  every rule inside the new section; 18 rules in the section):
+  resort-map 1, dining-room 1, service-room 1, map-table 1,
+  map-room 1, map-node 1, node-lobby 1, map-route 1, route-one 1,
+  route-two 1, map-unit 1, map-caption 1 (primary rules; `map-room`,
+  `map-table`, `map-unit` and `map-node` carry additional
+  child/descendant rules).
+- **Collision check** (the card's additions-only check against the
+  estate Map page): diff of `src/styles.css` against the base
+  branch is +29 lines / −0 lines — additions only, all inside the
+  new resort section. All 33 pre-existing estate map rules
+  (`.map-intro`, `.map-toolbar`, `.map-scroll`, `.estate-map`,
+  `.map-building`, `.map-zone-name`, `.map-zone-kind`,
+  `.map-land-label`, `.map-agent`, `.map-inspector`, `.map-stats`,
+  `.map-legend`, `.map-entry`, including their responsive
+  overrides) are byte-identical before and after, and no new
+  selector duplicates a pre-existing one — the resort classes only
+  share the `map-` prefix.
+- **Suites (Node v24.22.1 sandbox; baseline on the Z-02 base
+  reproduced first — identical results):** `npm run typecheck`
+  PASS; `npm run lint` PASS; `npm test` PASS — 14 tests, 5 files;
+  `npm run build` PASS; `npm run test:e2e` PASS — 6/6 (desktop +
+  Pixel 7 projects; the resort spec exercises all three routes,
+  including the Mission Control screen that renders this map).
+- **Render check** (throwaway Playwright script, deleted after the
+  run): on `/mission-control` at 1280×800 the two rooms sit side by
+  side (535px each) with distinct border-top colours (accent vs
+  `#2c665b`), the table chip renders inside the dining room
+  ("Table 04 · available"), the two clanker unit rows stack inside
+  the service room with status and battery right-aligned, route one
+  crosses the plan as a solid accent band behind the rooms and
+  route two as a dashed green band below it, and the lobby node
+  sits centred at the plan's foot; at 412×915 (Pixel 7) the same
+  layout holds at 136px per room with no overlapping text.
+  `documentElement.scrollWidth` equals the viewport width at both
+  viewports.
+- **Residual limits:** e2e ran against the full Chromium build
+  already in the local browser cache (chromium-1255) via a
+  temporary config that only overrode
+  `launchOptions.executablePath`; the temporary config was deleted
+  after the run and no repo file carries it — the stock
+  headless-shell artifact is not downloadable in this sandbox (same
+  caveat as Z-01 and Z-02), and no device result is claimed.
+  Breakpoint refinement of the resort grids remains Z-06 and
+  light-theme parity for the resort section remains Z-07 (the room
+  blocks' `#101112` ground is a dark-theme literal, as in Z-01/Z-02).
+  Observed, not acted on (named in no chunk card): `map-dot` — the
+  status dot inside each `map-unit` — still has no rule anywhere in
+  the sheet, so the unit rows read by name and status text alone;
+  `api-status` and `presence` likewise remain unstyled.

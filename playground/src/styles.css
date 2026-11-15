@@ -80,3 +80,32 @@
 .credit-pill{border:1px solid #2c665b;color:#63d7bd;padding:5px 8px;font-size:12px;white-space:nowrap}
 .coverage-note{display:flex;gap:10px;align-items:flex-start;padding-top:14px;font-size:13px;color:var(--muted)}
 .coverage-note svg{color:#72bfc1;flex:none}
+
+/* ============================================================
+   Resort (ZeroCloud Metro) — facility map · chunk Z-03
+   The schematic map in the Mission Control facility panel
+   (src/pages/ResortMetro.tsx): two room blocks on a bordered
+   plan, route bands passing behind them, the lobby node at the
+   foot. Styled only from the :root tokens and the existing type
+   styles above. The estate Map page's .map-* rules belong to a
+   different screen and are untouched — these resort classes
+   only share the map- prefix. The breakpoint pass is Z-06.
+   ============================================================ */
+.resort-map{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;border:1px solid var(--line);padding:20px}
+.map-route{position:absolute;left:0;right:0;pointer-events:none}
+.route-one{top:34%;height:3px;background:var(--accent)}
+.route-two{top:66%;border-top:2px dashed #63d7bd}
+.map-room{position:relative;background:#101112;border:1px solid var(--line);padding:16px;min-width:0}
+.dining-room{border-top:2px solid var(--accent)}
+.service-room{border-top:2px solid #2c665b}
+.map-room>span{display:block;font-size:10px;letter-spacing:2px;font-weight:600;color:#aab6b7;margin-bottom:8px}
+.map-room strong{display:block;font-size:19px;font-weight:500;margin-bottom:6px}
+.map-table{display:flex;align-items:center;gap:9px;border:1px solid var(--line);padding:10px 12px;margin-top:12px;font-size:13px}
+.map-table svg{color:#72bfc1;flex:none}
+.map-unit{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.map-unit:last-child{border-bottom:0;padding-bottom:0}
+.map-unit small{margin-left:auto;color:var(--muted);white-space:nowrap}
+.map-node{position:relative;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);padding:7px 12px;font-size:12px;background:var(--surface)}
+.map-node svg{color:#72bfc1;flex:none}
+.node-lobby{grid-column:1/-1;justify-self:center;border-color:var(--accent)}
+.map-caption{font-size:12px;color:var(--muted);margin-top:12px}
