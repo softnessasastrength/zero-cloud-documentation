@@ -275,3 +275,81 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   `structuredClone` out) and were not separately
   re-proven. The doc reconciliation of the default
   layout's claims remains Z-10's.
+
+### Z-10 — Reconcile the implementation doc · 2026-11-15 · Ember (Muse) · branch `metro-z10_muse`
+
+- **Base:** `metro-z09_muse` (PR #34; this PR targets
+  it and lands after it). The card declares "Depends
+  on: Z-08; Z-09 if it lands" — Z-09 has landed as a
+  branch, so the doc is reconciled against the
+  post-Z-09 tree. All 62 tracked playground files
+  were verified byte-identical to the
+  `metro-z09_muse` tree by git blob SHA-1 before
+  editing (100 tracked blobs repo-wide, 0
+  mismatches).
+- **Before this chunk:** the Boundaries section of
+  `docs/METRO_V1_IMPLEMENTATION.md` said "Resort
+  tiles in `Start.tsx` display values derived from
+  these same API entities." That was the doc's only
+  Start-tiles claim, and it was overbroad: it implied
+  Start tiles generally derive from the resort API,
+  when only two metric kinds do.
+- **Reconciled (that bullet only — the card's
+  acceptance is that no other section of the doc
+  changes):** the bullet now states that only tiles
+  bound to a resort metric derive from the resort
+  API entities — `resort-reservations` (the
+  reservation IDs held on tables that resolve in
+  `state.reservations`) and `resort-clankers`
+  (clankers whose status is `available`) — computed
+  in `Start.tsx` from the `getResortSnapshot()`
+  snapshot it polls on mount and every 2.5 seconds,
+  with one seeded tile of each kind in the default
+  layout's `Resort` group and any tile bindable to a
+  resort metric in the editor. It states that every
+  other metric (`clock`, `fleet`, `tasks`, `alerts`,
+  `energy`) derives from the household simulation
+  store — including `fleet`, whose "clankers
+  available" caption counts the household fleet, not
+  the resort fleet. And it states the unavailable
+  behaviour exactly as coded: above the small tile
+  size, a resort tile shows "connecting to resort
+  data" before any snapshot, "unavailable" /
+  "resort data unavailable" (never a number) if
+  polling fails before any snapshot arrives, and the
+  last value with "· cached" appended to its caption
+  when the snapshot is served from the client's
+  local cache or a poll fails after a value was
+  shown. Every sentence is checkable against
+  `Start.tsx`, `src/domain/resort-api.ts`,
+  `src/domain/seed.ts`, and `src/domain/engine.ts`.
+- **Suites (baseline on unmodified `metro-z09_muse`
+  reproduced first — typecheck PASS, lint PASS,
+  Vitest 19/19, build PASS, e2e 6/6):** `npm run
+  typecheck` PASS; `npm run lint` PASS; `npm test`
+  PASS — 19 tests, 5 files; `npm run build` PASS;
+  `npm run test:e2e` PASS — 6/6 (desktop + Pixel 7).
+  Documentation only: no code, styles, or tests
+  changed.
+- **Residual limits:** e2e ran against the cached
+  full Chromium build (chromium-1255) via a
+  temporary config that only overrode
+  `launchOptions.executablePath`; the temp config
+  was deleted after the run and no repo file carries
+  it — **no device result is claimed**. The
+  symlinked `node_modules` caveat from prior chunks
+  applies unchanged. Sandbox timings are not
+  performance evidence. Two nuances, recorded not
+  absorbed: (1) the `SIM` tag renders unconditionally
+  on every tile (Z-08's flagged nuance), so resort
+  staleness is carried by the caption, as the
+  reconciled paragraph states; (2) the wider doc
+  updates contemplated when this chunk was
+  commissioned (resort styling, light-theme parity,
+  the responsive pass) were NOT made — the card
+  scopes Z-10 to the Start-tiles paragraph and
+  forbids other sections changing.
+- **Plan complete:** Z-10 is the last chunk in
+  `CODEX_CHUNKS.md`. With this entry, chunks Z-01
+  through Z-10 are all implemented, each as an
+  unmerged PR.
