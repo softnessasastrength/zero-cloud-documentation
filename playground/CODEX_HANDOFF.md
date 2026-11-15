@@ -488,3 +488,109 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   `api-status` and `presence` still have no rules anywhere in
   the sheet; `replay-result` (the replay panel's good/bad
   verdict line) is likewise unstyled and named by no card.
+
+### Z-06 — Resort responsive pass · 2026-11-15 · Ember (Muse) · branch `metro-z06_muse`
+
+- **Base:** stacked on `metro-z05_muse` (PR #30, open and
+  unmerged) — the card's dependencies (Z-02, Z-04, Z-05) are
+  the stack below it, and this chunk's breakpoint rules must
+  follow all five Z-sections in source order to take effect
+  (see Placement). This branch's PR targets `metro-z05_muse`
+  so its diff is exactly the Z-06 change; it retargets to
+  `main` once PR #30 lands (and #30 once #29 lands, and #29
+  once #28 lands, and #28 once #27 lands, and #27 once #26
+  lands). All 62 tracked playground files were verified
+  byte-identical to the base tree by git blob SHA-1 before
+  editing.
+- **Styled:** appended one delimited section ("Resort
+  (ZeroCloud Metro) — responsive pass · chunk Z-06") after
+  the Z-05 section in `playground/src/styles.css`. The card
+  permitted edits within the earlier Z-sections; none were
+  needed — the diff is +32 lines / −0 lines, additions only,
+  because everything the card asks for is expressible as
+  breakpoint overrides of the base rules. The section holds
+  the resort rules at the sheet's two existing breakpoints:
+  - `@media(max-width:1000px)` — `metro-scenario-grid`
+    collapses to a single column (`flex-direction: column`;
+    `booking-panel` and `entitlement-panel` reset to
+    `flex: none`). The scenario grid has the estate compound
+    layout's shape — a main panel beside a 310px side panel —
+    and the base sheet collapses that layout at 1000px, so
+    the resort grid follows its twin. This also repairs the
+    wart Z-02's wrapping flex left behind: at every width
+    below the wrap point the stacked entitlement panel stayed
+    310px wide while the booking panel took the full column;
+    it now spans the column. The heroes take no 1000px rule:
+    the estate banner's only 1000px step is its 75px clock
+    shrinking to 50px, and the resort clocks are already
+    34px.
+  - `@media(max-width:650px)` — `mission-grid` and
+    `engineering-grid` collapse to a single column (same
+    panel reset), following the base sheet's two-column,
+    three-column and fleet layouts, which all go
+    single-column at 650px. The three heroes take the estate
+    banner's 650px recipe whole: `display: block`, padding
+    25px (from 35px 40px), headline 34px (from 45px); and
+    the hero side elements take the estate time's step below
+    the text — `welcome-clock` and `mc-clock` get
+    `margin-top: 30px`, and the engineering banner's glyph
+    becomes a block with the same margin.
+  - **Placement:** the blocks sit at the tail of the sheet,
+    after the Z-01…Z-05 base rules — not inside the sheet's
+    original media queries, which precede the resort
+    sections; at equal specificity a breakpoint rule placed
+    there could never override the later base rules. The
+    estate map section is the in-file precedent: it carries
+    its own media queries inside its own section, after its
+    base rules. Only the existing breakpoint widths are
+    used; no token was added, no component was touched, and
+    no animation was added — reduced motion stays governed
+    by the sheet's global reduce rule.
+- **Coverage check** (the card names no new classes; the
+  six it names each have rules inside the new section's
+  media blocks, grep-verifiable — selector occurrences in
+  the section): metro-scenario-grid 3, mission-grid 2,
+  engineering-grid 2, resort-welcome 2, mc-hero 2,
+  engineering-banner 3; the panel resets and hero side
+  elements: booking-panel 1, entitlement-panel 1,
+  welcome-clock 1, mc-clock 1.
+- **Suites (Node v24.22.1 sandbox; baseline on the Z-05
+  base reproduced first — identical results):**
+  `npm run typecheck` PASS; `npm run lint` PASS;
+  `npm test` PASS — 14 tests, 5 files; `npm run build`
+  PASS; `npm run test:e2e` PASS — 6/6 (desktop + Pixel 7).
+  One process note: a mid-run lint pass reported 18 errors,
+  every one inside the throwaway probe scripts; with the
+  probes deleted lint is clean, exactly as on the base.
+- **Render check** (throwaway Playwright probe against the
+  dev server + simulator, deleted after the run; viewport
+  widths 1280/1024/1000/900/768/650/412/390 on all three
+  routes, before and after): at 1280 and 1024 the layouts
+  are the base's exactly (panels side by side, clocks beside
+  the headlines). At 1000px the scenario grid is a single
+  full-width column (panels 920/920, was 580/310) while the
+  two-panel grids remain side by side (445/445) until their
+  650px collapse; at 900 and 768 the scenario panels are
+  full width (828, 707 — the entitlement panel was 310). At
+  650, 412 and 390 every grid is one full-width column and
+  every hero is in its block form — computed styles at 640
+  and 390 confirm `display: block`, padding 25px, headline
+  34px and the side elements' 30px top margin on all three
+  heroes. `documentElement.scrollWidth` equals the viewport
+  width at every probed width on all three routes — in
+  particular at 390px on `/resort`, `/mission-control` and
+  `/engineering`, the card's render check. The base already
+  passed that check incidentally through flex wrapping; the
+  explicit rules keep it green while making the collapse a
+  deliberate step with the rest of the app.
+- **Residual limits:** e2e ran against the full Chromium
+  build already in the local browser cache (chromium-1255)
+  via a temporary config that only overrode
+  `launchOptions.executablePath`; the temporary config was
+  deleted after the run and no repo file carries it — the
+  stock headless-shell artifact is not downloadable in this
+  sandbox (same caveat as Z-01–Z-05), and no device result
+  is claimed. Light-theme parity for the resort section
+  remains Z-07. Observed, not acted on (named in no chunk
+  card): `map-dot`, `api-status`, `presence` and
+  `replay-result` still have no rules anywhere in the sheet.
