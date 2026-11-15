@@ -1,6 +1,45 @@
-import { it,expect } from 'vitest';
+import { afterEach,it,expect,vi } from 'vitest';
 import { render,screen,fireEvent,cleanup } from '@testing-library/react';
 import { HashRouter } from 'react-router-dom';
 import { Start } from '../src/pages/Start';
 import { database,storage,useStore } from '../src/state/store';
+import type { Tile } from '../src/domain/models';
+import { initialResortState } from '../src/domain/resort';
 it('edits tile sizes and writes IndexedDB',async()=>{render(<HashRouter><Start/></HashRouter>);fireEvent.click(screen.getByText('personalize'));fireEvent.click(screen.getByLabelText('Edit ZeroSchedule'));fireEvent.change(screen.getByLabelText('Size'),{target:{value:'small'}});expect(useStore.getState().tiles[0].size).toBe('small');await storage.setItem('test-layout',JSON.stringify(useStore.getState().tiles));expect(JSON.parse((await database.settings.get('test-layout'))!.value)[0].size).toBe('small');cleanup();});
+const resortTile=(id:string,label:string,metric:Tile['metric']):Tile=>({id,label,route:'/resort',size:'medium',group:'Resort',color:'#007f87',metric});
+afterEach(()=>{vi.unstubAllGlobals();});
+it('derives resort tile values from a stubbed resort snapshot',async()=>{
+ const state=initialResortState();
+ state.reservations.push({id:'reservation-1',employee_id:'emp-mara',guest_name:'Alex',table_id:'table-garden-04',start:840,duration:60,credit_quote:12,status:'confirmed'},{id:'reservation-2',employee_id:'emp-mara',guest_name:'Sam',table_id:'table-garden-04',start:960,duration:60,credit_quote:12,status:'confirmed'});
+ state.tables[0].reservations.push('reservation-1','reservation-2');
+ state.clankers[0].status='fault';
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue({ok:true,json:async()=>state}));
+ useStore.setState({tiles:[resortTile('tile-res-held','Held reservations','resort-reservations'),resortTile('tile-res-fleet','Resort fleet','resort-clankers')]});
+ render(<HashRouter><Start/></HashRouter>);
+ const held=await screen.findByText('reservations held');
+ expect(held.closest('article')!.querySelector('.tile-number')!.textContent).toBe('2reservations held');
+ const fleet=await screen.findByText('resort clankers available');
+ expect(fleet.closest('article')!.querySelector('.tile-number')!.textContent).toBe('1resort clankers available');
+ cleanup();
+});
+it('shows an explicit unavailable label for resort tiles when the API fails and no cache exists',async()=>{
+ await database.settings.clear();
+ vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new TypeError('offline')));
+ useStore.setState({tiles:[resortTile('tile-res-held','Held reservations','resort-reservations')]});
+ render(<HashRouter><Start/></HashRouter>);
+ const label=await screen.findByText('unavailable');
+ const number=label.closest('article')!.querySelector('.tile-number')!;
+ expect(number.textContent).toBe('unavailableresort data unavailable');
+ expect(number.textContent).not.toMatch(/\d/);
+ cleanup();
+});
+it('shows cached resort values with the stale state visible when the API is unreachable',async()=>{
+ const state=initialResortState();
+ await database.settings.put({key:'resort-state-cache-v1',value:JSON.stringify(state)});
+ vi.stubGlobal('fetch',vi.fn().mockRejectedValue(new TypeError('offline')));
+ useStore.setState({tiles:[resortTile('tile-res-fleet','Resort fleet','resort-clankers')]});
+ render(<HashRouter><Start/></HashRouter>);
+ const caption=await screen.findByText(/\u00b7 cached/);
+ expect(caption.closest('article')!.querySelector('.tile-number')!.textContent).toBe('2resort clankers available \u00b7 cached');
+ cleanup();
+});

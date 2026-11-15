@@ -108,3 +108,86 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   (20261114/15/16), versioned commands, JSONL journal, replay hash verified
   identical across runs in this pass; UI screens were unrouted until fix 2
   and are unstyled until scoped item 1.
+
+## Chunk log (CODEX_CHUNKS.md)
+
+### Z-08 — Resort-sourced tile metrics · 2026-11-15 · Ember (Muse) · branch `metro-z08_muse`
+
+- **Base:** `main` (this PR targets `main` directly; no
+  stack, no retarget cascade). The card declares "Depends
+  on: None" and the chunk book's ordering note calls Z-08
+  independent; the files it names (`src/domain/models.ts`,
+  `src/pages/Start.tsx`, `tests/ui.test.tsx`) were verified
+  byte-identical between `main` and the stack head
+  `metro-z07_muse` by git blob SHA-1 — across the whole
+  repo the two trees differ only in `src/styles.css` and
+  this log. This entry therefore opens the chunk-log
+  section on `main`; when PR #26 lands, its Z-01 entry
+  appends under the same heading (a possible one-line
+  merge adjacency in this log file, flagged in the PR
+  body). All 62 tracked playground files were verified
+  byte-identical to the `main` tree by git blob SHA-1
+  before editing (100 tracked blobs repo-wide, 0
+  mismatches).
+- **Before this chunk:** `Start.tsx` derived every tile
+  value from the household simulation store (`metric()`
+  over `clock`, `fleet`, `tasks`, `alerts`, `energy`) and
+  never called the resort API — the gap
+  `docs/METRO_V1_IMPLEMENTATION.md` glosses over and Z-10
+  reconciles. The tile metric enum had no resort kinds,
+  so no tile could name resort state at all.
+- **Wired:** `tileSchema`'s metric enum gains
+  `resort-reservations` and `resort-clankers`.
+  `Start.tsx` polls `getResortSnapshot()` from
+  `src/domain/resort-api.ts` on mount and every 2.5s
+  (the `useResort` cadence) and resolves resort tiles
+  from that snapshot with Mission Control's own
+  derivations, so a tile cannot disagree with
+  `/mission-control`: held reservations = reservation
+  IDs held on tables that resolve in
+  `state.reservations`; available clankers =
+  `status==='available'`. The tile editor's "Live
+  content" select offers the new kinds.
+- **Honesty states (the chunk's point):** a fresh
+  snapshot shows the derived count under the tile's
+  existing `SIM` tag; a cached snapshot (simulator
+  unreachable, cache present — `getResortSnapshot()`'s
+  `stale` path) shows the count with `· cached`
+  appended to the caption, so the stale state is
+  visible on the tile; a failed poll after a value was
+  shown keeps the last value but flips it to the same
+  `· cached` marking rather than presenting it as
+  live; with no snapshot at all the tile shows the
+  explicit label `unavailable` ("resort data
+  unavailable") and no numeric value — never a
+  fabricated number. Household metrics are untouched.
+- **Suites (baseline on unmodified `main` reproduced
+  first — identical results):** `npm run typecheck`
+  PASS; `npm run lint` PASS; `npm test` PASS — 17
+  tests, 5 files (14 baseline + 3 new in
+  `tests/ui.test.tsx`: a stubbed snapshot renders the
+  derived counts, 2 held / 1 available; API failing
+  with no cache renders `unavailable` with no digit
+  anywhere in the tile's number block; API failing
+  with a seeded cache renders the cached count with
+  `· cached`). The existing Start tile-editing test
+  passes unmodified. `npm run build` PASS.
+  `npm run test:e2e` PASS — 6/6 (desktop + Pixel 7).
+  A throwaway browser probe (deleted after the run)
+  drove the real editor against the seeded simulator:
+  a tile rebound to `resort-reservations` showed
+  `0reservations held`; rebound to `resort-clankers`
+  it showed `2resort clankers available` — the
+  seed-20261114 state, derived live.
+- **Residual limits:** e2e and the probe ran against
+  the full Chromium build already in the local browser
+  cache (chromium-1255) via a temporary config that
+  only overrode `launchOptions.executablePath`; the
+  temporary config and probe were deleted after their
+  runs and no repo file carries them — no device
+  result is claimed. No default layout gains resort
+  tiles here (that is Z-09, which also owns the
+  saved-layout guarantee); a resort tile exists only
+  when a user assigns one in the editor. The doc
+  sentence that overclaims this wiring is Z-10's to
+  fix.
