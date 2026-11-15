@@ -301,3 +301,91 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   status dot inside each `map-unit` — still has no rule anywhere in
   the sheet, so the unit rows read by name and status text alone;
   `api-status` and `presence` likewise remain unstyled.
+
+### Z-04 — Mission Control · 2026-11-15 · Ember (Muse) · branch `metro-z04_muse`
+
+- **Base:** stacked on `metro-z03_muse` (PR #28, open and unmerged) —
+  the card declares "Depends on: Z-01" only, and its class set is
+  disjoint from Z-02's and Z-03's, but the chunk appends its section
+  directly after Z-03's in the same stylesheet build-out series, and
+  the Mission Control screen's primitives (Z-01), people-panel
+  classes (Z-02) and facility map (Z-03) precede it in that sheet.
+  This branch's PR targets `metro-z03_muse` so its diff is exactly
+  the Z-04 change; it retargets to `main` once PR #28 lands (and
+  #28 once #27 lands, and #27 once #26 lands). All 62 tracked
+  playground files were verified byte-identical to the base tree
+  by git blob SHA-1 before editing.
+- **Styled:** appended one delimited section ("Resort (ZeroCloud
+  Metro) — mission control · chunk Z-04") after the Z-03 section in
+  `playground/src/styles.css`; no existing line was modified. It
+  gives rules to the 7 classes the card names — `mc-hero`,
+  `mc-clock`, `mission-metrics`, `mission-metric`, `metric-icon`,
+  `mission-grid`, `system-facts`. Only the existing `:root` tokens
+  and the sheet's established patterns were used: the hero takes
+  the `estate-banner`/`resort-welcome` recipe whole (gradient,
+  accent left border, 45px headline) with the clock as its right
+  cell in the `welcome-clock` shape (centred column, 34px weight-300
+  time, `panel-kicker` label); the metric strip is a wrapping flex
+  row of `data-widget` cards (surface, accent border-top) whose
+  values take the `entitlement-stat`/`tile-number` scale (44px,
+  weight 300) and whose icon takes the `credit-symbol` chip (44px,
+  `#2c665b` border, `#63d7bd` glyph); the panel grid follows
+  `metro-scenario-grid` (wrapping flex, panels at a 420px basis),
+  so the two panels sit side by side on desktop and stack at phone
+  widths without disturbing the Z-03 map layout inside the first
+  panel; `system-facts` takes the sheet's existing `.facts`
+  definition-list recipe (150px label column, muted `dt`, ruled
+  rows). No new tokens, no component edits, no class renames.
+  One wording nuance, recorded rather than silently absorbed: the
+  card groups `system-facts` with the `/mission-control` classes,
+  but in the code it renders in the **Engineering Console**
+  (`/engineering`, the "DETERMINISTIC REPLAY" panel's seed-facts
+  list) — the same kind of route-label looseness as Z-03's map.
+  No chunk owns it if Z-04 does not (Z-05's card does not name it),
+  so Z-04 styles it and the render check below verifies it where
+  it actually renders. No stop-and-report condition was hit.
+- **Coverage check** (every class ≥ 1 rule in `src/styles.css`,
+  every rule inside the new section; 17 rules in the section):
+  mc-hero 3, mc-clock 3, mission-metrics 1, mission-metric 3,
+  metric-icon 1, mission-grid 2, system-facts 4 (selector
+  occurrences; each class has exactly one primary rule, the rest
+  are descendant rules). The diff against the base branch is
+  +46 lines / −0 lines — additions only — and no new selector
+  duplicates a pre-existing one.
+- **Suites (Node v24.22.1 sandbox; baseline on the Z-03 base
+  reproduced first — identical results):** `npm run typecheck`
+  PASS; `npm run lint` PASS; `npm test` PASS — 14 tests, 5 files;
+  `npm run build` PASS; `npm run test:e2e` PASS — 6/6 (desktop +
+  Pixel 7 projects; the resort spec drives the booking flow into
+  Mission Control and asserts the garden-table metric's held
+  count).
+- **Render check** (throwaway Playwright script against the dev
+  server + simulator, deleted after the run; booking flow
+  reproduced so the garden-table metric holds a reservation): on
+  `/mission-control` at 1280×800 the hero spans the content width
+  with the gradient ground and 45px headline, the clock sits at
+  its right ("13:00" at 34px under the VIRTUAL CLOCK label), the
+  four metric cards share one row (279px each, no overlap, 44px
+  icon chips), the garden-table metric reads "1/2" at 44px, and
+  the two panels sit side by side (574px each). At 412×915
+  (Pixel 7) the clock wraps beneath the hero text, the metric
+  cards stack full-width with no overlap, the panels stack, and
+  "1/2" still reads at 44px. On `/engineering` the
+  `system-facts` list renders its 5 facts as ruled grid rows with
+  muted labels. `documentElement.scrollWidth` equals the viewport
+  width on both screens at both viewports.
+- **Residual limits:** e2e ran against the full Chromium build
+  already in the local browser cache (chromium-1255) via a
+  temporary config that only overrode
+  `launchOptions.executablePath`; the temporary config was deleted
+  after the run and no repo file carries it — the stock
+  headless-shell artifact is not downloadable in this sandbox
+  (same caveat as Z-01–Z-03), and no device result is claimed.
+  Breakpoint refinement of the resort grids and heroes remains
+  Z-06 (the metric strip's one-card-per-row wrap at phone widths
+  is this chunk's flex basis at work, not a breakpoint rule), and
+  light-theme parity for the resort section remains Z-07 (the
+  hero gradient is a dark-theme literal, as in Z-01/Z-02).
+  Observed, not acted on (named in no chunk card): `map-dot`,
+  `api-status` and `presence` still have no rules anywhere in the
+  sheet.
