@@ -33,3 +33,50 @@
 .metro-event time{font-size:12px;color:#72bfc1}
 .metro-event>div{flex:1}
 .event-quality{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#63d7bd;white-space:nowrap}
+
+/* ============================================================
+   Resort (ZeroCloud Metro) — request screen · chunk Z-02
+   Classes specific to /resort (src/pages/ResortMetro.tsx);
+   several also render inside the /mission-control people
+   panel. Styled only from the :root tokens and the existing
+   type styles above. The scenario layout wraps to one stacked
+   column at small widths; the resort breakpoint pass is Z-06.
+   ============================================================ */
+.resort-welcome{display:flex;justify-content:space-between;align-items:center;gap:30px;flex-wrap:wrap;padding:35px 40px;background:linear-gradient(110deg,#103a3e,#152526 70%,#202527);border-left:4px solid #40c5c6;margin:25px 0 32px}
+.resort-welcome h2{font-size:45px;line-height:1.15;margin-bottom:10px}
+.resort-welcome p{max-width:600px;color:#a8c7c5;margin-bottom:0}
+.welcome-clock{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none;text-align:center}
+.welcome-clock svg{color:#81d7d2}
+.welcome-clock strong{font-size:34px;font-weight:300;line-height:1.1}
+.metro-scenario-grid{display:flex;flex-wrap:wrap;gap:30px}
+.booking-panel{flex:1 1 420px;border-top:2px solid var(--accent)}
+.entitlement-panel{flex:0 1 310px;border-top:2px solid var(--line)}
+.entitlement-stat{margin:20px 0 16px}
+.entitlement-stat span{font-size:12px;color:var(--muted)}
+.entitlement-stat strong{display:block;font-size:44px;font-weight:300;line-height:1.05;margin-top:6px}
+.entitlement-stat strong small{display:inline;font-size:16px;color:var(--muted)}
+.entitlement-equation{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;font-size:13px}
+.entitlement-equation span,.entitlement-equation b{color:var(--muted);font-weight:400}
+.scenario-form{margin-top:20px}
+.credit-quote{display:flex;align-items:center;gap:14px;border:1px solid var(--line);padding:12px 14px;margin:16px 0}
+.credit-quote>div{flex:1}
+.credit-quote>span{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);white-space:nowrap}
+.credit-symbol{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid #2c665b;color:#63d7bd;font-size:22px}
+.credit-quote .credit-symbol{flex:none}
+.consent-note{margin-top:10px}
+.scenario-confirmed{display:flex;gap:14px;border:1px solid #32694f;padding:16px;margin-top:20px}
+.scenario-confirmed h3{margin-top:0;margin-bottom:6px}
+.scenario-confirmed p{font-size:13px;color:var(--muted);margin-bottom:4px}
+.confirm-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;flex:none;background:#32694f;color:#7be4b1}
+.guest-privacy-card{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);padding:14px;font-size:13px;line-height:1.6}
+.guest-privacy-card svg{color:#72bfc1;flex:none}
+.request-privacy{margin-top:16px}
+.protected-banner{display:flex;align-items:center;gap:9px;border:1px solid #32694f;color:#7be4b1;padding:11px 13px;font-size:13px;margin-top:16px}
+.employee-card{display:flex;align-items:center;gap:15px;padding:14px 0;border-bottom:1px solid var(--line)}
+.employee-card>div{flex:1}
+.employee-card .employee-avatar{flex:none}
+.employee-avatar{display:flex;align-items:center;justify-content:center;width:44px;height:44px;background:var(--accent);color:#fff;font-weight:600;letter-spacing:1px}
+.employee-card p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.credit-pill{border:1px solid #2c665b;color:#63d7bd;padding:5px 8px;font-size:12px;white-space:nowrap}
+.coverage-note{display:flex;gap:10px;align-items:flex-start;padding-top:14px;font-size:13px;color:var(--muted)}
+.coverage-note svg{color:#72bfc1;flex:none}

@@ -147,3 +147,70 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   2026-11-14 pass), and no device result is claimed. Responsive stacking
   of the resort grids remains Z-06 and light-theme parity for the resort
   section remains Z-07; screen-specific classes remain Z-02/Z-04/Z-05.
+
+### Z-02 — ResortMetro request screen · 2026-11-15 · Ember (Muse) · branch `metro-z02_muse`
+
+- **Base:** stacked on `metro-z01_muse` (PR #26, open and unmerged) — the
+  card declares "Depends on: Z-01", and this chunk appends its section
+  directly after Z-01's in the same build-out series. This branch's PR
+  targets `metro-z01_muse` so its diff is exactly the Z-02 change; it
+  retargets to `main` once PR #26 lands.
+- **Styled:** appended one delimited section ("Resort (ZeroCloud Metro) —
+  request screen · chunk Z-02") after the Z-01 section in
+  `playground/src/styles.css`; no existing line was modified. It gives
+  rules to the 20 classes the card names — `resort-welcome`,
+  `welcome-clock`, `metro-scenario-grid`, `booking-panel`,
+  `entitlement-panel`, `entitlement-stat`, `entitlement-equation`,
+  `credit-quote`, `credit-pill`, `credit-symbol`, `employee-card`,
+  `employee-avatar`, `scenario-form`, `consent-note`, `request-privacy`,
+  `guest-privacy-card`, `protected-banner`, `scenario-confirmed`,
+  `confirm-icon`, `coverage-note`. Only the existing `:root` tokens and
+  the sheet's established patterns were used: the `estate-banner`
+  gradient hero for `resort-welcome`, the `data-widget` accent border
+  for `booking-panel`, the `event-row` pattern for `employee-card`, the
+  `simulation-badge` synthetic green for `credit-pill`/`credit-symbol`,
+  and the `status` healthy green (`#32694f`/`#7be4b1`) for
+  `scenario-confirmed`/`confirm-icon`/`protected-banner`. No new tokens,
+  no component edits, no class renames. The scenario layout is a
+  wrapping flex row (booking `flex:1 1 420px`, entitlement
+  `flex:0 1 310px`, the sheet's 30px gap) so the panels sit side by
+  side on desktop and stack at phone widths without taking Z-06's
+  breakpoint scope; Z-06 may still convert or refine it.
+- **Coverage check** (grep count of rule occurrences per class in
+  `src/styles.css`, all ≥ 1, every rule inside the new section):
+  resort-welcome 3, welcome-clock 3, metro-scenario-grid 1,
+  booking-panel 1, entitlement-panel 1, entitlement-stat 4,
+  entitlement-equation 3, credit-quote 4, credit-pill 1, credit-symbol
+  2, employee-card 4, employee-avatar 2, scenario-form 1, consent-note
+  1, request-privacy 1, guest-privacy-card 2, protected-banner 1,
+  scenario-confirmed 3, confirm-icon 1, coverage-note 2.
+- **Suites (Node v24.22.1 sandbox; baseline on the Z-01 base reproduced
+  first — identical results):** `npm run typecheck` PASS; `npm run
+  lint` PASS; `npm test` PASS — 14 tests, 5 files; `npm run build`
+  PASS; `npm run test:e2e` PASS — 6/6 (desktop + Pixel 7 projects; the
+  resort spec renders this screen at both viewports and drives the
+  booking flow through `scenario-confirmed`).
+- **Render check** (throwaway Playwright script, deleted after the
+  run): at 1280×800 the booking and entitlement panels share the top
+  row side by side, the welcome clock sits inside the banner without
+  overlapping the heading text, and after confirming a booking the
+  `scenario-confirmed` card and `protected-banner` render in place; at
+  412×915 (Pixel 7) the panels stack vertically and the clock wraps
+  below the welcome text; `/mission-control` renders `employee-card`,
+  `employee-avatar`, `credit-pill` and `coverage-note` at full size.
+  At rest, `documentElement.scrollWidth` equals the viewport width on
+  both screens (a 3–4px transient during load traces to the app's
+  pre-existing `enter` animation on `main`, not to these rules; the
+  only elements extending past the viewport are the pivot nav's links
+  inside its by-design horizontal scroll strip).
+- **Residual limits:** e2e ran against the full Chromium build already
+  in the local browser cache (chromium-1255) via a temporary config
+  that only overrode `launchOptions.executablePath`; the temporary
+  config was deleted after the run and no repo file carries it — the
+  stock headless-shell artifact is not downloadable in this sandbox
+  (same caveat as Z-01 and the 2026-11-14 pass), and no device result
+  is claimed. Breakpoint refinement of the resort heroes and grids
+  remains Z-06 and light-theme parity for the resort section remains
+  Z-07. Observed, not acted on (named in no chunk card): `api-status`,
+  `presence` and `map-dot` are used by these screens but have no rules
+  anywhere in the sheet.
