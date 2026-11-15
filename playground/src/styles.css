@@ -155,3 +155,30 @@
 .system-facts dt{color:var(--muted)}
 
 .system-facts dd{margin:0;overflow-wrap:anywhere}
+
+/* ============================================================
+   Resort (ZeroCloud Metro) — engineering console · chunk Z-05
+   Classes specific to /engineering (src/pages/ResortMetro.tsx):
+   the banner, the scenario selector panel, the clock/replay
+   panel grid, and the fault lab with its per-clanker control
+   rows. Styled only from the :root tokens and the existing
+   type styles above. The replay panel's system-facts list was
+   already styled by Z-04 and is not touched here. The grid
+   wraps to one stacked column at small widths; the resort
+   breakpoint pass is Z-06.
+   ============================================================ */
+.engineering-banner{display:flex;justify-content:space-between;align-items:center;gap:30px;flex-wrap:wrap;padding:35px 40px;background:linear-gradient(110deg,#103a3e,#152526 70%,#202527);border-left:4px solid #40c5c6;margin:25px 0 32px}
+.engineering-banner h2{font-size:45px;line-height:1.15;margin-bottom:10px}
+.engineering-banner p{max-width:600px;color:#a8c7c5;margin-bottom:0}
+.engineering-banner>svg{color:#81d7d2;flex:none}
+.scenario-selector{border-top:2px solid var(--accent);margin-bottom:30px}
+.engineering-grid{display:flex;flex-wrap:wrap;gap:30px}
+.engineering-grid>.metro-panel{flex:1 1 420px}
+.clock-control{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.clock-control strong{font-size:44px;font-weight:300;line-height:1.05}
+.clock-control span{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.fault-panel{margin-top:30px}
+.fleet-control-row{display:flex;align-items:center;gap:15px;padding:14px 0;border-bottom:1px solid var(--line)}
+.fleet-control-row>div{flex:1;min-width:0}
+.fleet-control-row button{flex:none}
+.engineer-toggle{font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:4px 7px;border:1px solid var(--line);color:var(--muted);text-align:right}

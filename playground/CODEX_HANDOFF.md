@@ -389,3 +389,102 @@ npx playwright install chromium && npm run test:e2e   # needs Playwright CDN acc
   Observed, not acted on (named in no chunk card): `map-dot`,
   `api-status` and `presence` still have no rules anywhere in the
   sheet.
+
+### Z-05 — Engineering Console · 2026-11-15 · Ember (Muse) · branch `metro-z05_muse`
+
+- **Base:** stacked on `metro-z04_muse` (PR #29, open and unmerged) —
+  the card declares "Depends on: Z-01" only, and its class set is
+  disjoint from Z-02's, Z-03's and Z-04's, but the chunk appends its
+  section directly after Z-04's in the same stylesheet build-out
+  series, and the Engineering screen's primitives (Z-01) and its
+  replay panel's facts list (Z-04) precede it in that sheet. This
+  branch's PR targets `metro-z04_muse` so its diff is exactly
+  the Z-05 change; it retargets to `main` once PR #29 lands (and
+  #29 once #28 lands, and #28 once #27 lands, and #27 once #26
+  lands). All 62 tracked playground files were verified
+  byte-identical to the base tree by git blob SHA-1 before editing.
+- **Styled:** appended one delimited section ("Resort (ZeroCloud
+  Metro) — engineering console · chunk Z-05") after the Z-04
+  section in `playground/src/styles.css`; no existing line was
+  modified. It gives rules to the 7 classes the card names —
+  `engineering-banner`, `engineering-grid`, `scenario-selector`,
+  `clock-control`, `fault-panel`, `fleet-control-row`,
+  `engineer-toggle`. Only the existing `:root` tokens and the
+  sheet's established patterns were used: the banner takes the
+  `estate-banner`/`resort-welcome`/`mc-hero` recipe whole
+  (gradient, accent left border, 45px headline) with the wrench
+  glyph in the `welcome-clock` svg colour (`#81d7d2`);
+  `scenario-selector` takes `booking-panel`'s accent border-top
+  as the screen's primary control panel, with a 30px bottom
+  margin separating it from the grid; `engineering-grid` follows
+  `mission-grid` (wrapping flex, panels at a 420px basis), so
+  the clock and replay panels sit side by side on desktop and
+  stack at phone widths; `clock-control` pairs the
+  `mission-metric` value scale (44px, weight 300) with the
+  `status`/`data-tag` label type for the running state;
+  `fault-panel` takes a 30px top margin (the grid-gap rhythm);
+  `fleet-control-row` follows `employee-card`/`metro-event`
+  (flex row, ruled bottom border) with the name block at
+  `flex: 1` and the action button at `flex: none`, so each
+  row's control stays full-size and individually operable, as
+  the card requires; `engineer-toggle` takes the `data-tag`
+  recipe minus `white-space: nowrap` — the "engineer role
+  required · choose it in settings" string is far longer than
+  any `data-tag` text and would overflow the fault panel's
+  heading at phone widths, so it wraps right-aligned instead.
+  No new tokens, no component edits, no class renames. Unlike
+  Z-03 and Z-04 there is no route-label looseness to record:
+  all 7 classes render on `/engineering` exactly as the card
+  describes, and `system-facts` — which renders in this
+  screen's replay panel, inside the new grid — was already
+  styled by Z-04 and is not restyled here; the render check
+  verifies it still renders under the grid's layout. No
+  stop-and-report condition was hit.
+- **Coverage check** (every class ≥ 1 rule in `src/styles.css`,
+  every rule inside the new section; 15 rules in the section):
+  engineering-banner 4, engineering-grid 2, scenario-selector 1,
+  clock-control 3, fault-panel 1, fleet-control-row 3,
+  engineer-toggle 1 (selector occurrences; each class has
+  exactly one primary rule, the rest are descendant rules). The
+  diff against the base branch is +27 lines / −0 lines —
+  additions only — and no new selector duplicates a
+  pre-existing one.
+- **Suites (Node v24.22.1 sandbox; baseline on the Z-04 base
+  reproduced first — identical results):** `npm run typecheck`
+  PASS; `npm run lint` PASS; `npm test` PASS — 14 tests, 5
+  files; `npm run build` PASS; `npm run test:e2e` PASS — 6/6
+  (desktop + Pixel 7 projects; the resort spec's engineering
+  test drives this screen's scenario selector and clicks the
+  fault button scoped to Percival's `fleet-control-row` at the
+  phone viewport).
+- **Render check** (throwaway Playwright script against the dev
+  server + simulator, deleted after the run): on `/engineering`
+  at 1280×800 the banner spans the content width with the
+  gradient ground and 45px headline and the wrench glyph at its
+  right, the scenario selector carries the accent top border,
+  the clock and replay panels sit side by side (574px each)
+  with the clock reading "13:00" at 44px, `system-facts`
+  renders its 5 ruled rows inside the replay panel, the
+  engineer toggle shows its full role-required text, and both
+  fleet rows (Percival, Cogsworth) keep their buttons inside
+  the row bounds. At 412×915 (Pixel 7) the banner holds, the
+  panels stack full-width, the toggle text wraps without
+  pushing the layout out, and both fleet buttons remain in-row
+  and visible. `documentElement.scrollWidth` equals the
+  viewport width at both viewports.
+- **Residual limits:** e2e ran against the full Chromium build
+  already in the local browser cache (chromium-1255) via a
+  temporary config that only overrode
+  `launchOptions.executablePath`; the temporary config was
+  deleted after the run and no repo file carries it — the stock
+  headless-shell artifact is not downloadable in this sandbox
+  (same caveat as Z-01–Z-04), and no device result is claimed.
+  Breakpoint refinement of the resort grids and heroes remains
+  Z-06 (the panel grid's stacking at phone widths is this
+  chunk's flex basis at work, not a breakpoint rule), and
+  light-theme parity for the resort section remains Z-07 (the
+  banner gradient is a dark-theme literal, as in Z-02/Z-04).
+  Observed, not acted on (named in no chunk card): `map-dot`,
+  `api-status` and `presence` still have no rules anywhere in
+  the sheet; `replay-result` (the replay panel's good/bad
+  verdict line) is likewise unstyled and named by no card.
